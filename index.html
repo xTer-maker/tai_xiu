@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BETMASTER - Hệ Thống Bảo Mật Cao</title>
+    <title>BETMASTER - Đẳng Cấp Casino 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -11,45 +11,117 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; margin: 0; }
-        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .logo-gradient { background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .ban-overlay { backdrop-filter: blur(20px); background: rgba(15, 23, 42, 0.98); }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        
+        :root {
+            --primary: #fbbf24;
+            --bg: #020617;
+            --card: rgba(30, 41, 59, 0.5);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            background-image: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #020617 80%);
+            min-height: 100vh;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .neo-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .neo-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(251, 191, 36, 0.1);
+        }
+
+        .gold-text {
+            background: linear-gradient(to bottom, #fde047, #ca8a04);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .playing-card {
+            width: 60px;
+            height: 85px;
+            border-radius: 8px;
+            background: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-gold:hover {
+            transform: brightness(1.1) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(217, 119, 6, 0.5);
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
-<body>
+<body class="overflow-x-hidden">
 
-    <!-- Màn hình bị Khóa (Banned) -->
-    <div id="ban-screen" class="hidden fixed inset-0 z-[2000] ban-overlay flex flex-col items-center justify-center p-6 text-center">
-        <div class="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-8 border border-red-500/30">
-            <i data-lucide="gavel" class="text-red-500 w-12 h-12"></i>
+    <!-- Ban Screen -->
+    <div id="ban-screen" class="hidden fixed inset-0 z-[1000] glass flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-8 border border-red-500/50 float">
+            <i data-lucide="shield-off" class="text-red-500 w-12 h-12"></i>
         </div>
-        <h1 class="text-4xl font-black text-white uppercase italic mb-4">Tài khoản bị tạm khóa</h1>
-        <p id="ban-reason" class="text-slate-400 max-w-md leading-relaxed mb-8">Tài khoản của bạn đã vi phạm chính sách của BETMASTER và bị đình chỉ quyền truy cập.</p>
-        <div class="bg-slate-900 p-4 rounded-2xl border border-white/5 mb-8">
-            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Thời gian mở khóa</p>
-            <p id="ban-expiry" class="text-yellow-500 font-bold">Vĩnh viễn</p>
+        <h1 class="text-4xl font-black gold-text uppercase mb-4">TRUY CẬP BỊ TỪ CHỐI</h1>
+        <p id="ban-reason" class="text-slate-400 max-w-md mb-8">Tài khoản của bạn đã bị vô hiệu hóa do vi phạm chính sách cộng đồng.</p>
+        <div class="bg-slate-900/80 p-6 rounded-3xl border border-white/10 mb-8">
+            <p class="text-xs text-slate-500 uppercase font-bold mb-2">Thời gian hết hạn</p>
+            <p id="ban-expiry" class="text-xl font-bold text-red-400">VĨNH VIỄN</p>
         </div>
-        <button onclick="location.reload()" class="bg-slate-800 text-white px-8 py-3 rounded-full font-bold uppercase text-xs">Quay lại</button>
+        <button onclick="location.reload()" class="btn-gold px-10 py-3 rounded-full text-slate-900 font-bold uppercase text-xs">Quay lại</button>
     </div>
 
-    <!-- Navigation Bar -->
-    <nav id="main-nav" class="hidden fixed top-0 w-full z-50 glass p-4">
+    <!-- Navigation -->
+    <nav id="main-nav" class="hidden fixed top-0 w-full z-50 glass px-6 py-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('lobby')">
-                <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i data-lucide="gem" class="text-slate-900 w-6 h-6"></i>
+            <div class="flex items-center gap-4 cursor-pointer" onclick="switchView('lobby')">
+                <div class="w-12 h-12 btn-gold rounded-2xl flex items-center justify-center shadow-2xl">
+                    <i data-lucide="gem" class="text-slate-900 w-7 h-7"></i>
                 </div>
-                <h1 class="text-2xl font-black italic tracking-tighter uppercase">BET<span class="text-yellow-500">MASTER</span></h1>
+                <div>
+                    <h1 class="text-2xl font-black italic gold-text tracking-tighter leading-none">BETMASTER</h1>
+                    <span class="text-[8px] font-bold text-slate-500 tracking-[0.3em] uppercase">Professional Casino</span>
+                </div>
             </div>
+            
             <div class="flex items-center gap-4">
-                <button id="admin-btn" onclick="switchView('admin')" class="hidden w-10 h-10 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-full flex items-center justify-center">
-                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                <button id="admin-btn" onclick="switchView('admin')" class="hidden w-11 h-11 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-2xl flex items-center justify-center hover:bg-purple-500/40 transition">
+                    <i data-lucide="lock" class="w-5 h-5"></i>
                 </button>
-                <div onclick="toggleProfileModal()" class="flex items-center gap-3 bg-slate-800/60 p-1 pl-4 rounded-full border border-white/10 cursor-pointer hover:bg-slate-800 transition">
-                    <p id="nav-balance" class="text-sm font-black text-green-400 mr-2">0đ</p>
-                    <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                <div onclick="toggleProfile()" class="flex items-center gap-3 bg-slate-800/80 p-1.5 pl-5 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700 transition">
+                    <p id="nav-balance" class="text-sm font-black text-green-400">0đ</p>
+                    <div class="w-9 h-9 rounded-xl bg-slate-600 flex items-center justify-center shadow-inner">
                         <i data-lucide="user" class="w-5 h-5"></i>
                     </div>
                 </div>
@@ -57,87 +129,184 @@
         </div>
     </nav>
 
-    <!-- App Container -->
-    <main class="pt-24 pb-12 px-4 max-w-7xl mx-auto">
+    <!-- Main Content -->
+    <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
         
-        <!-- Login View -->
-        <div id="view-auth" class="hidden max-w-md mx-auto mt-8 bg-slate-900/60 p-10 rounded-[3.5rem] border border-white/5 shadow-2xl text-center">
-            <div class="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-[2rem] flex items-center justify-center shadow-2xl mx-auto mb-6">
-                <i data-lucide="gem" class="text-slate-900 w-10 h-10"></i>
-            </div>
-            <h2 id="auth-title" class="text-4xl font-black logo-gradient italic uppercase mb-8 tracking-tighter">BETMASTER</h2>
-            <div class="space-y-4">
-                <input type="text" id="auth-user" placeholder="Tên tài khoản" class="w-full bg-slate-950 p-4 rounded-2xl border border-white/5 outline-none focus:border-yellow-500/50">
-                <input type="password" id="auth-pass" placeholder="Mật khẩu" class="w-full bg-slate-950 p-4 rounded-2xl border border-white/5 outline-none focus:border-yellow-500/50">
-                <button onclick="handleAuth()" class="w-full bg-yellow-500 text-slate-950 font-black py-4 rounded-2xl shadow-xl hover:bg-yellow-400 transition uppercase text-sm">Vào Hệ Thống</button>
-                <button id="auth-toggle" onclick="toggleAuthMode()" class="w-full text-slate-500 text-[10px] font-black uppercase opacity-60">Chưa có tài khoản? Đăng ký</button>
+        <!-- Auth View -->
+        <div id="view-auth" class="hidden max-w-md mx-auto">
+            <div class="glass p-10 rounded-[3rem] shadow-2xl border border-white/10 text-center relative overflow-hidden">
+                <div class="absolute -top-20 -left-20 w-40 h-40 bg-yellow-500/10 blur-[80px]"></div>
+                <div class="w-24 h-24 btn-gold rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl float">
+                    <i data-lucide="gem" class="text-slate-900 w-12 h-12"></i>
+                </div>
+                <h2 id="auth-title" class="text-5xl font-black gold-text italic mb-10 tracking-tighter">BETMASTER</h2>
+                
+                <div class="space-y-5">
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                        <input type="text" id="auth-user" placeholder="Tên đăng nhập" class="w-full bg-slate-900/50 p-5 pl-14 rounded-2xl border border-white/5 focus:border-yellow-500/50 outline-none transition">
+                    </div>
+                    <div class="relative">
+                        <i data-lucide="key-round" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                        <input type="password" id="auth-pass" placeholder="Mật khẩu" class="w-full bg-slate-900/50 p-5 pl-14 rounded-2xl border border-white/5 focus:border-yellow-500/50 outline-none transition">
+                    </div>
+                    <button onclick="handleAuth()" class="w-full btn-gold text-slate-900 font-black py-5 rounded-2xl text-sm uppercase tracking-widest">Bắt đầu ngay</button>
+                    <button onclick="toggleAuth()" id="auth-toggle" class="text-slate-500 text-[10px] font-bold uppercase opacity-60 hover:opacity-100 transition">Chưa có tài khoản? Đăng ký</button>
+                </div>
             </div>
         </div>
 
         <!-- Lobby View -->
-        <div id="view-lobby" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div onclick="switchView('dice')" class="bg-slate-900/40 p-8 rounded-[3rem] border border-white/5 cursor-pointer hover:scale-105 transition">
-                <div class="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6"><i data-lucide="dice-5" class="text-red-500 w-8 h-8"></i></div>
-                <h3 class="text-2xl font-black italic uppercase">Tài Xỉu 3D</h3>
-                <p class="text-slate-500 text-sm mt-2">Chơi cực nhanh, nhận tiền cực lẹ.</p>
+        <div id="view-lobby" class="hidden space-y-12">
+            <header class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-6xl font-black italic gold-text tracking-tighter uppercase">SẢNH VIP</h2>
+                    <p class="text-slate-500 text-xs font-bold tracking-[0.4em] mt-2 uppercase">Chào mừng quý khách trở lại</p>
+                </div>
+                <button onclick="activateVIP()" class="text-[9px] font-bold text-slate-700 hover:text-yellow-500 uppercase tracking-widest transition">Kích hoạt quyền VIP</button>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <!-- Game: Tài Xỉu -->
+                <div onclick="switchView('dice')" class="neo-card p-10 rounded-[3.5rem] cursor-pointer group">
+                    <div class="w-20 h-20 bg-gradient-to-br from-red-500 to-rose-700 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-red-500/20 group-hover:rotate-12 transition">
+                        <i data-lucide="dice-5" class="w-10 h-10 text-white"></i>
+                    </div>
+                    <h3 class="text-3xl font-black italic uppercase mb-3">Tài Xỉu 3D</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-8">Kết quả minh bạch, xanh chín tuyệt đối. Tỉ lệ ăn cực cao.</p>
+                    <div class="flex items-center gap-3 text-yellow-500 font-bold text-xs uppercase">Vào bàn cược <i data-lucide="arrow-right" class="w-4 h-4"></i></div>
+                </div>
+
+                <!-- Game: Tiến Lên -->
+                <div onclick="switchView('poker')" class="neo-card p-10 rounded-[3.5rem] cursor-pointer group">
+                    <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-blue-500/20 group-hover:rotate-12 transition">
+                        <i data-lucide="spade" class="w-10 h-10 text-white"></i>
+                    </div>
+                    <h3 class="text-3xl font-black italic uppercase mb-3">Tiến Lên</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-8">Đấu trí cùng cao thủ. Game bài dân gian đẳng cấp Casino.</p>
+                    <div class="flex items-center gap-3 text-yellow-500 font-bold text-xs uppercase">Chơi ngay <i data-lucide="arrow-right" class="w-4 h-4"></i></div>
+                </div>
+
+                <!-- Game: Baccarat -->
+                <div class="neo-card p-10 rounded-[3.5rem] opacity-40 grayscale cursor-not-allowed">
+                    <div class="w-20 h-20 bg-slate-700 rounded-3xl flex items-center justify-center mb-10">
+                        <i data-lucide="crown" class="w-10 h-10 text-slate-500"></i>
+                    </div>
+                    <h3 class="text-3xl font-black italic uppercase mb-3">Baccarat</h3>
+                    <p class="text-slate-500 text-sm">Hệ thống đang bảo trì kỹ thuật...</p>
+                </div>
             </div>
-            <div class="bg-slate-900/40 p-8 rounded-[3rem] border border-white/5 opacity-40 grayscale pointer-events-none">
-                <div class="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6"><i data-lucide="layers" class="text-blue-500 w-8 h-8"></i></div>
-                <h3 class="text-2xl font-black italic uppercase">Tiến Lên</h3>
-                <p class="text-slate-500 text-sm mt-2">Sắp ra mắt phiên bản mới.</p>
+        </div>
+
+        <!-- Dice View -->
+        <div id="view-dice" class="hidden max-w-xl mx-auto glass p-12 rounded-[4rem] text-center space-y-12">
+            <button onclick="switchView('lobby')" class="text-slate-600 hover:text-white uppercase font-bold text-[10px] tracking-widest transition">← Trở lại</button>
+            <div class="flex justify-center gap-10">
+                <div id="dice-1" class="w-32 h-32 bg-white rounded-[2.5rem] text-slate-900 text-6xl font-black flex items-center justify-center shadow-2xl transform -rotate-6">?</div>
+                <div id="dice-2" class="w-32 h-32 bg-white rounded-[2.5rem] text-slate-900 text-6xl font-black flex items-center justify-center shadow-2xl transform rotate-6">?</div>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <button onclick="playDice('xiu')" class="bg-blue-600/90 py-10 rounded-[2.5rem] text-4xl font-black shadow-xl hover:bg-blue-500 transition">XỈU</button>
+                <button onclick="playDice('tai')" class="bg-red-600/90 py-10 rounded-[2.5rem] text-4xl font-black shadow-xl hover:bg-red-600 transition">TÀI</button>
+            </div>
+            <div class="bg-slate-950/80 p-8 rounded-[3rem] border border-white/5">
+                <p class="text-[10px] text-slate-500 font-bold uppercase mb-4">Mức cược hiện tại</p>
+                <input type="number" id="dice-bet" value="10000" class="w-full bg-transparent text-center text-5xl font-black text-yellow-500 outline-none">
+            </div>
+        </div>
+
+        <!-- Poker View (Tiến Lên) -->
+        <div id="view-poker" class="hidden max-w-4xl mx-auto glass p-10 rounded-[4rem] min-h-[600px] flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute inset-0 bg-green-900/10 pointer-events-none"></div>
+            
+            <div class="flex justify-between items-center relative z-10">
+                <button onclick="switchView('lobby')" class="text-slate-500 font-bold text-xs uppercase">Rời bàn</button>
+                <div class="flex gap-4">
+                    <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">BÀN: #2026</div>
+                    <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">MỨC CƯỢC: 10K</div>
+                </div>
+            </div>
+
+            <!-- Dealer/Opponent Space -->
+            <div class="flex justify-center gap-2 opacity-60">
+                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
+                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
+                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
+            </div>
+
+            <!-- Table Space -->
+            <div id="poker-table" class="flex justify-center items-center h-40">
+                <p class="text-slate-600 font-bold italic uppercase tracking-widest text-sm">Lượt đánh của bạn...</p>
+            </div>
+
+            <!-- Player Cards -->
+            <div class="space-y-6 relative z-10">
+                <div id="player-hand" class="flex justify-center -space-x-8">
+                    <!-- Cards will be injected here -->
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button class="bg-slate-800 px-10 py-4 rounded-2xl font-bold text-xs uppercase">Bỏ lượt</button>
+                    <button onclick="alert('Đang đánh bài...')" class="btn-gold px-12 py-4 rounded-2xl font-black text-xs uppercase text-slate-900">Đánh bài</button>
+                </div>
             </div>
         </div>
 
         <!-- Admin View -->
-        <div id="view-admin" class="hidden space-y-6">
-            <div class="bg-slate-900 p-6 rounded-3xl border border-purple-500/20 flex justify-between items-center">
-                <h2 class="text-xl font-black uppercase italic text-purple-400">Quản Lý Bảo Mật</h2>
-                <button onclick="switchView('lobby')" class="bg-slate-800 px-6 py-2 rounded-full text-[10px] font-bold uppercase">Đóng</button>
+        <div id="view-admin" class="hidden space-y-8">
+            <div class="glass p-8 rounded-[3rem] flex justify-between items-center border-purple-500/20 shadow-2xl">
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 bg-purple-500/20 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="shield-check" class="text-purple-400 w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-black gold-text italic tracking-tight uppercase">Admin Master</h2>
+                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Hệ thống bảo mật tối cao</p>
+                    </div>
+                </div>
+                <button onclick="switchView('lobby')" class="bg-slate-800 px-8 py-3 rounded-full font-bold text-[10px] uppercase">Đóng Panel</button>
             </div>
-            <div id="admin-list" class="grid grid-cols-1 gap-4"></div>
-        </div>
 
-        <!-- Game View (Tài Xỉu) -->
-        <div id="view-dice" class="hidden max-w-lg mx-auto bg-slate-900 p-12 rounded-[4rem] text-center space-y-8">
-            <button onclick="switchView('lobby')" class="text-slate-500 uppercase text-[10px] font-bold">← Trở lại</button>
-            <div class="flex justify-center gap-4">
-                <div id="d1" class="w-20 h-20 bg-white rounded-2xl text-slate-950 text-4xl flex items-center justify-center font-black shadow-2xl">?</div>
-                <div id="d2" class="w-20 h-20 bg-white rounded-2xl text-slate-950 text-4xl flex items-center justify-center font-black shadow-2xl">?</div>
+            <div class="grid grid-cols-1 gap-5" id="admin-user-list">
+                <!-- Admin entries injected here -->
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="playDice('xiu')" class="bg-blue-600 py-8 rounded-3xl text-2xl font-black">XỈU</button>
-                <button onclick="playDice('tai')" class="bg-red-600 py-8 rounded-3xl text-2xl font-black">TÀI</button>
-            </div>
-            <input type="number" id="dice-bet" value="10000" class="w-full bg-slate-950 p-6 rounded-3xl text-center text-3xl font-black text-yellow-500 border border-white/5 outline-none">
         </div>
 
     </main>
 
     <!-- Profile Modal -->
-    <div id="profile-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur flex items-center justify-center p-4">
-        <div class="bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border border-white/10">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black uppercase italic">Hồ sơ & Bảo mật</h3>
-                <button onclick="toggleProfileModal()"><i data-lucide="x" class="w-6 h-6"></i></button>
+    <div id="profile-modal" class="hidden fixed inset-0 z-[100] glass flex items-center justify-center p-6">
+        <div class="bg-slate-900 w-full max-w-md rounded-[3rem] p-10 border border-white/10 shadow-2xl">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-black gold-text italic uppercase">Tài khoản</h3>
+                <button onclick="toggleProfile()"><i data-lucide="x" class="text-slate-500"></i></button>
             </div>
-            <div class="space-y-4 mb-6">
-                <div class="bg-slate-950 p-4 rounded-xl border border-white/5">
-                    <p class="text-[9px] text-slate-500 font-bold uppercase">ID Người dùng</p>
-                    <p id="p-id" class="font-bold text-yellow-500">...</p>
-                </div>
-                <div class="bg-slate-950 p-4 rounded-xl border border-white/5">
-                    <p class="text-[9px] text-slate-500 font-bold uppercase">IP Hiện tại</p>
-                    <p id="p-ip" class="font-bold text-white">Đang lấy IP...</p>
-                </div>
-                <div class="bg-slate-800/50 p-4 rounded-xl">
-                    <p class="text-[9px] text-yellow-500 font-black uppercase mb-2">Nhập Giftcode</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="gc-input" class="bg-black flex-1 p-2 rounded text-xs uppercase" placeholder="...">
-                        <button onclick="redeemCode()" class="bg-yellow-500 text-slate-950 px-4 rounded font-bold text-[10px]">NHẬN</button>
+            
+            <div class="space-y-6">
+                <div class="bg-slate-950 p-6 rounded-3xl border border-white/5">
+                    <p class="text-[9px] text-slate-500 font-bold uppercase mb-2">Tên hội viên</p>
+                    <p id="p-username" class="text-xl font-black uppercase tracking-widest">...</p>
+                    <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
+                        <div>
+                            <p class="text-[9px] text-slate-500 font-bold uppercase">IP Hiện tại</p>
+                            <p id="p-ip" class="text-xs font-bold text-blue-400">0.0.0.0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] text-slate-500 font-bold uppercase">IP Đăng ký</p>
+                            <p id="p-reg-ip" class="text-xs font-bold text-slate-400">0.0.0.0</p>
+                        </div>
                     </div>
                 </div>
+
+                <div class="bg-slate-800/40 p-6 rounded-3xl border border-white/10">
+                    <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-4">Mã quà tặng (Giftcode)</p>
+                    <div class="flex gap-3">
+                        <input type="text" id="giftcode-input" placeholder="LIXI2026..." class="flex-1 bg-black p-4 rounded-xl text-xs uppercase outline-none focus:border-yellow-500/50">
+                        <button onclick="redeem()" class="btn-gold px-6 rounded-xl font-black text-[10px] uppercase text-slate-900">Nhận</button>
+                    </div>
+                </div>
+
+                <button onclick="location.reload()" class="w-full bg-red-500/10 text-red-500 py-4 rounded-2xl font-bold uppercase text-[10px] border border-red-500/20 hover:bg-red-500 hover:text-white transition">Đăng xuất</button>
             </div>
-            <button onclick="location.reload()" class="w-full bg-red-500/20 text-red-500 py-3 rounded-2xl font-bold uppercase text-[10px]">Đăng xuất</button>
         </div>
     </div>
 
@@ -151,172 +320,206 @@
             appId: "1:298730080386:web:9dc19f94dab52df710cc9b"
         };
 
-        let db, auth, currentUser, currentIP = '0.0.0.0';
-        let authMode = 'login';
-        const MASTER_ACC = 'nguyenadmin';
-
-        async function getIP() {
-            try {
-                const res = await fetch('https://api.ipify.org?format=json');
-                const data = await res.json();
-                currentIP = data.ip;
-                if(document.getElementById('p-ip')) document.getElementById('p-ip').innerText = currentIP;
-            } catch (e) { console.error("IP Error"); }
-        }
+        let db, auth, currentUser, currentIP = "0.0.0.0";
+        let mode = 'login';
+        const MASTER = 'nguyenadmin';
 
         async function init() {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            auth = firebase.auth();
-            await auth.signInAnonymously();
-            await getIP();
-            lucide.createIcons();
-            document.getElementById('view-auth').classList.remove('hidden');
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                await auth.signInAnonymously();
+                
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                currentIP = ipData.ip;
+
+                lucide.createIcons();
+                switchView('auth');
+            } catch (e) { alert("Lỗi hệ thống: " + e.message); }
         }
 
-        function toggleAuthMode() {
-            authMode = authMode === 'login' ? 'register' : 'login';
-            document.getElementById('auth-title').innerText = authMode === 'login' ? 'BETMASTER' : 'ĐĂNG KÝ';
-            document.getElementById('auth-toggle').innerText = authMode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập';
+        function toggleAuth() {
+            mode = mode === 'login' ? 'register' : 'login';
+            document.getElementById('auth-title').innerText = mode === 'login' ? 'BETMASTER' : 'ĐĂNG KÝ';
+            document.getElementById('auth-toggle').innerText = mode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập';
         }
 
         async function handleAuth() {
             const u = document.getElementById('auth-user').value.trim().toLowerCase();
             const p = document.getElementById('auth-pass').value.trim();
-            if(!u || !p) return alert("Nhập đủ thông tin!");
+            if(!u || !p) return;
 
             const ref = db.collection('users').doc(u);
             const snap = await ref.get();
 
-            if(authMode === 'register') {
+            if(mode === 'register') {
                 if(snap.exists) return alert("Tài khoản đã tồn tại!");
-                const data = { 
-                    username: u, password: p, balance: 50000, 
-                    isAdmin: (u === MASTER_ACC), 
-                    regIP: currentIP, lastIP: currentIP,
-                    banned: false, banExpiry: null,
-                    redeemed: []
+                const data = {
+                    username: u, password: p, balance: 100000,
+                    isAdmin: (u === MASTER), regIP: currentIP, lastIP: currentIP,
+                    banned: false, banExpiry: null, redeemed: []
                 };
                 await ref.set(data);
-                alert("Đăng ký thành công!"); toggleAuthMode();
+                alert("Đăng ký thành công! Hãy đăng nhập."); toggleAuth();
             } else {
-                if(!snap.exists || snap.data().password !== p) return alert("Sai thông tin!");
+                if(!snap.exists || snap.data().password !== p) return alert("Sai tài khoản hoặc mật khẩu!");
                 const data = snap.data();
                 
-                // Kiểm tra BAN
                 if(data.banned) {
                     const now = new Date().getTime();
                     if(data.banExpiry === 'forever' || data.banExpiry > now) {
-                        showBanScreen(data.banExpiry);
-                        return;
-                    } else {
-                        // Tự động gỡ ban nếu hết hạn
-                        await ref.update({ banned: false, banExpiry: null });
+                        return showBan(data.banExpiry);
                     }
                 }
 
                 currentUser = data;
                 await ref.update({ lastIP: currentIP });
-                ref.onSnapshot(doc => { if(doc.exists) { currentUser = doc.data(); updateUI(); } });
+                ref.onSnapshot(doc => { if(doc.exists) { currentUser = doc.data(); updateNav(); } });
                 switchView('lobby');
             }
         }
 
-        function showBanScreen(expiry) {
+        function showBan(expiry) {
             document.getElementById('ban-screen').classList.remove('hidden');
-            if(expiry === 'forever') {
-                document.getElementById('ban-expiry').innerText = "Vĩnh viễn";
-            } else {
-                document.getElementById('ban-expiry').innerText = new Date(expiry).toLocaleString('vi-VN');
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('nav-balance').innerText = currentUser.balance.toLocaleString() + 'đ';
-            document.getElementById('p-id').innerText = currentUser.username;
-            document.getElementById('admin-btn').classList.toggle('hidden', !currentUser.isAdmin);
+            document.getElementById('ban-expiry').innerText = expiry === 'forever' ? 'VĨNH VIỄN' : new Date(expiry).toLocaleString();
         }
 
         function switchView(v) {
-            ['auth', 'lobby', 'dice', 'admin'].forEach(id => document.getElementById('view-'+id).classList.add('hidden'));
+            ['auth', 'lobby', 'dice', 'poker', 'admin'].forEach(id => document.getElementById('view-'+id).classList.add('hidden'));
             document.getElementById('view-'+v).classList.remove('hidden');
             document.getElementById('main-nav').classList.toggle('hidden', v === 'auth');
+            
+            if(v === 'poker') renderPokerCards();
             if(v === 'admin') loadAdmin();
             lucide.createIcons();
         }
 
-        function toggleProfileModal() { document.getElementById('profile-modal').classList.toggle('hidden'); }
+        function updateNav() {
+            document.getElementById('nav-balance').innerText = currentUser.balance.toLocaleString() + 'đ';
+            document.getElementById('admin-btn').classList.toggle('hidden', !currentUser.isAdmin);
+        }
 
-        async function redeemCode() {
-            const code = document.getElementById('gc-input').value.toUpperCase();
-            if(code === "LIXI2026") {
-                if(currentUser.redeemed?.includes(code)) return alert("Đã nhận rồi!");
+        function toggleProfile() {
+            document.getElementById('profile-modal').classList.toggle('hidden');
+            document.getElementById('p-username').innerText = currentUser.username;
+            document.getElementById('p-ip').innerText = currentIP;
+            document.getElementById('p-reg-ip').innerText = currentUser.regIP;
+        }
+
+        async function redeem() {
+            const code = document.getElementById('giftcode-input').value.toUpperCase();
+            if(code === 'LIXI2026') {
+                if(currentUser.redeemed?.includes(code)) return alert("Bạn đã nhận mã này rồi!");
                 await db.collection('users').doc(currentUser.username).update({
                     balance: firebase.firestore.FieldValue.increment(100000),
                     redeemed: firebase.firestore.FieldValue.arrayUnion(code)
                 });
-                alert("Đã nhận 100K!"); toggleProfileModal();
-            }
+                alert("Chúc mừng! Bạn nhận được 100K.");
+                toggleProfile();
+            } else { alert("Mã không hợp lệ!"); }
         }
 
+        // --- DICE GAME ---
         async function playDice(side) {
             const bet = parseInt(document.getElementById('dice-bet').value);
-            if(bet > currentUser.balance) return alert("Không đủ tiền!");
-            const n1 = Math.floor(Math.random()*6)+1;
-            const n2 = Math.floor(Math.random()*6)+1;
-            document.getElementById('d1').innerText = n1;
-            document.getElementById('d2').innerText = n2;
-            const win = (side==='tai' && (n1+n2+4)>=11) || (side==='xiu' && (n1+n2+4)<=10);
+            if(bet > currentUser.balance) return alert("Số dư không đủ!");
+
+            const d1 = Math.floor(Math.random()*6)+1;
+            const d2 = Math.floor(Math.random()*6)+1;
+            document.getElementById('dice-1').innerText = d1;
+            document.getElementById('dice-2').innerText = d2;
+
+            const win = (side === 'tai' && (d1+d2+4) >= 11) || (side === 'xiu' && (d1+d2+4) <= 10);
             await db.collection('users').doc(currentUser.username).update({
                 balance: firebase.firestore.FieldValue.increment(win ? bet : -bet)
             });
         }
 
+        // --- POKER (TIẾN LÊN) ---
+        function renderPokerCards() {
+            const hand = document.getElementById('player-hand');
+            hand.innerHTML = '';
+            const suits = ['♠', '♣', '♦', '♥'];
+            const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+            
+            // Render 13 cards random
+            for(let i=0; i<13; i++) {
+                const s = suits[Math.floor(Math.random()*4)];
+                const v = values[Math.floor(Math.random()*13)];
+                const color = (s === '♦' || s === '♥') ? 'text-red-500' : 'text-slate-900';
+                hand.innerHTML += `
+                    <div class="playing-card group hover:-translate-y-10 transition cursor-pointer">
+                        <div class="${color} text-xs">${v}${s}</div>
+                        <div class="${color} text-xl self-center">${s}</div>
+                        <div class="${color} text-xs rotate-180">${v}${s}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // --- ADMIN SYSTEM ---
+        async function activateVIP() {
+            const code = prompt("Nhập mã kích hoạt quyền Admin:");
+            if(code === 'ADMIN200829') {
+                await db.collection('users').doc(currentUser.username).update({ isAdmin: true });
+                alert("Kích hoạt Admin thành công!");
+                updateNav();
+            }
+        }
+
         async function loadAdmin() {
             const snap = await db.collection('users').get();
-            const list = document.getElementById('admin-list');
+            const list = document.getElementById('admin-user-list');
             list.innerHTML = '';
             snap.forEach(doc => {
                 const u = doc.data();
-                const isMaster = u.username === MASTER_ACC;
+                if(u.username === MASTER) return;
                 list.innerHTML += `
-                    <div class="bg-slate-950 p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row justify-between gap-4">
-                        <div>
-                            <p class="font-black ${u.banned ? 'text-red-500' : 'text-yellow-500'} uppercase">${u.username} ${u.banned ? '[BANNED]' : ''}</p>
-                            <p class="text-[9px] text-slate-500">Reg IP: ${u.regIP} | Last IP: ${u.lastIP}</p>
-                            <p class="text-[9px] text-green-500 font-bold">Ví: ${u.balance.toLocaleString()}đ</p>
+                    <div class="glass p-6 rounded-3xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl ${u.banned ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'} flex items-center justify-center">
+                                <i data-lucide="${u.banned ? 'user-x' : 'user-check'}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="font-black uppercase text-sm">${u.username}</p>
+                                <p class="text-[8px] text-slate-500 font-bold">REG: ${u.regIP} | LAST: ${u.lastIP}</p>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            ${!isMaster ? `
-                                <button onclick="banUser('${u.username}', 1)" class="bg-orange-500/10 text-orange-500 px-3 py-1 rounded-lg text-[9px] font-bold">BAN 1H</button>
-                                <button onclick="banUser('${u.username}', 'forever')" class="bg-red-500/10 text-red-500 px-3 py-1 rounded-lg text-[9px] font-bold">BAN FOREVER</button>
-                                <button onclick="unbanUser('${u.username}')" class="bg-green-500/10 text-green-500 px-3 py-1 rounded-lg text-[9px] font-bold">UNBAN</button>
-                                <button onclick="editCash('${u.username}')" class="bg-blue-500/10 text-blue-500 px-3 py-1 rounded-lg text-[9px] font-bold">MONEY</button>
-                            ` : ''}
+                        <div class="text-center md:text-right">
+                            <p class="text-green-400 font-black text-xs">${u.balance.toLocaleString()}đ</p>
+                            <p class="text-[8px] text-slate-600 uppercase font-bold">${u.banned ? 'Đang bị khóa' : 'Đang hoạt động'}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="adjustMoney('${u.username}')" class="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Sửa tiền</button>
+                            <button onclick="banAction('${u.username}', 1)" class="bg-orange-500/10 text-orange-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Khóa 1H</button>
+                            <button onclick="banAction('${u.username}', 'forever')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Khóa VV</button>
+                            <button onclick="unbanAction('${u.username}')" class="bg-green-500/10 text-green-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Mở</button>
                         </div>
                     </div>
                 `;
             });
+            lucide.createIcons();
         }
 
-        async function banUser(u, type) {
-            let expiry = 'forever';
-            if(type === 1) expiry = new Date().getTime() + (3600 * 1000);
-            await db.collection('users').doc(u).update({ banned: true, banExpiry: expiry });
-            alert("Đã khóa tài khoản " + u); loadAdmin();
-        }
-
-        async function unbanUser(u) {
-            await db.collection('users').doc(u).update({ banned: false, banExpiry: null });
-            alert("Đã mở khóa tài khoản " + u); loadAdmin();
-        }
-
-        async function editCash(u) {
-            const amt = parseInt(prompt("Nhập số tiền thay đổi (vd: 50000 hoặc -20000):"));
+        async function adjustMoney(u) {
+            const amt = parseInt(prompt("Nhập số tiền thay đổi (vd: 500000 hoặc -100000):"));
             if(!isNaN(amt)) {
                 await db.collection('users').doc(u).update({ balance: firebase.firestore.FieldValue.increment(amt) });
                 loadAdmin();
             }
+        }
+
+        async function banAction(u, type) {
+            const expiry = type === 'forever' ? 'forever' : new Date().getTime() + (3600 * 1000);
+            await db.collection('users').doc(u).update({ banned: true, banExpiry: expiry });
+            alert("Đã khóa người dùng " + u); loadAdmin();
+        }
+
+        async function unbanAction(u) {
+            await db.collection('users').doc(u).update({ banned: false, banExpiry: null });
+            alert("Đã mở khóa người dùng " + u); loadAdmin();
         }
 
         init();

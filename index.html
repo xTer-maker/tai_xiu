@@ -1,294 +1,505 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetMaster - Trò Chơi Đặt Cược</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .win-animation { animation: bounce 0.5s ease infinite alternate; }
-        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
-        input[type="range"] { accent-color: #3b82f6; }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4">
+import React, { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { User, Shield, LogOut, Settings, Gift, ChevronRight, X, Wallet, History } from 'lucide-react';
 
-    <!-- Notification System -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transition-all duration-300 transform translate-x-full">
-        <div id="toast-content" class="px-6 py-3 rounded-lg shadow-lg text-white font-medium"></div>
-    </div>
+// Firebase configuration provided by environment
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'bet-master-v2';
 
-    <!-- Login/Register View -->
-    <div id="auth-view" class="w-full max-w-md glass-card p-8 rounded-2xl">
-        <h2 class="text-3xl font-bold text-center mb-8 text-blue-400">BetMaster</h2>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm mb-1">Tên đăng nhập</label>
-                <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-lg outline-none focus:border-blue-500">
-            </div>
-            <div>
-                <label class="block text-sm mb-1">Mật khẩu</label>
-                <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-lg outline-none focus:border-blue-500">
-            </div>
-            <div class="flex gap-2 pt-4">
-                <button onclick="handleAuth('login')" class="flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold transition">Đăng Nhập</button>
-                <button onclick="handleAuth('register')" class="flex-1 bg-slate-700 hover:bg-slate-600 p-3 rounded-lg font-bold transition">Đăng Ký</button>
-            </div>
-            <p class="text-xs text-slate-500 text-center mt-4">Mẹo: Đăng ký lần đầu nhận 20,000đ</p>
+const ADMIN_ACCESS_CODE = "NGUYENADMIN200829";
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+  const [view, setView] = useState('auth'); // auth, game
+  const [modal, setModal] = useState(null); // profile, admin, userDetails, giftcode
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  
+  const [authMode, setAuthMode] = useState('login');
+  const [form, setForm] = useState({ username: '', password: '', giftcode: '', adminCode: '' });
+  const [bet, setBet] = useState({ amount: 1000, multiplier: 1 });
+  const [gameResult, setGameResult] = useState({ num: '?', status: 'idle' });
+  const [toast, setToast] = useState(null);
+
+  // Auth initialization
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // We handle logic via custom username login simulated on top of Firebase UID
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch User Data & Global Users
+  useEffect(() => {
+    const fetchGlobalUsers = () => {
+      const q = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+      return onSnapshot(q, (snapshot) => {
+        const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllUsers(usersList);
+        
+        if (userData) {
+          const updatedSelf = usersList.find(u => u.username === userData.username);
+          if (updatedSelf) setUserData(updatedSelf);
+        }
+      }, (err) => console.error("Firestore error:", err));
+    };
+
+    const unsub = fetchGlobalUsers();
+    return () => unsub();
+  }, [userData?.username]);
+
+  const showToast = (msg, type = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAuth = async () => {
+    if (!form.username || !form.password) return showToast("Vui lòng điền đủ thông tin", "error");
+    
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', form.username);
+    const userSnap = await getDoc(userDocRef);
+
+    if (authMode === 'register') {
+      if (userSnap.exists()) return showToast("Tên đăng nhập đã tồn tại", "error");
+      const newUser = {
+        username: form.username,
+        password: form.password,
+        balance: 20000,
+        isAdmin: false,
+        isBanned: false,
+        createdAt: new Date().toISOString(),
+        transactions: [{ type: 'Hệ thống', amount: 20000, desc: 'Thưởng đăng ký', time: new Date().toISOString() }]
+      };
+      await setDoc(userDocRef, newUser);
+      showToast("Đăng ký thành công!");
+      setAuthMode('login');
+    } else {
+      if (!userSnap.exists() || userSnap.data().password !== form.password) {
+        return showToast("Sai tài khoản hoặc mật khẩu", "error");
+      }
+      if (userSnap.data().isBanned) return showToast("Tài khoản đã bị khóa", "error");
+      setUserData(userSnap.data());
+      setView('game');
+    }
+  };
+
+  const logTransaction = async (username, type, amount, desc) => {
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', username);
+    await updateDoc(userDocRef, {
+      transactions: arrayUnion({ type, amount, desc, time: new Date().toISOString() })
+    });
+  };
+
+  const updateBalance = async (username, newBalance) => {
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', username);
+    await updateDoc(userDocRef, { balance: newBalance });
+  };
+
+  const playGame = async (side) => {
+    if (userData.balance < bet.amount) return showToast("Không đủ số dư", "error");
+    if (gameResult.status === 'rolling') return;
+
+    setGameResult({ num: '...', status: 'rolling' });
+    
+    setTimeout(async () => {
+      const luckyNum = Math.floor(Math.random() * 100) + 1;
+      const isWin = (side === 'over' && luckyNum > 50) || (side === 'under' && luckyNum <= 50);
+      const change = isWin ? Math.floor(bet.amount * bet.multiplier) : -Math.floor(bet.amount * bet.multiplier);
+      const newBalance = Math.max(0, userData.balance + change);
+
+      setGameResult({ num: luckyNum, status: isWin ? 'win' : 'lose' });
+      await updateBalance(userData.username, newBalance);
+      await logTransaction(userData.username, isWin ? 'Thắng cược' : 'Thua cược', change, `Đặt ${side === 'over' ? 'Trên' : 'Dưới'} 50 (x${bet.multiplier})`);
+      
+      showToast(isWin ? `Thắng +${change}đ` : `Thua ${change}đ`, isWin ? 'success' : 'error');
+    }, 800);
+  };
+
+  const verifyAdmin = async () => {
+    if (form.adminCode === ADMIN_ACCESS_CODE) {
+      const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userData.username);
+      await updateDoc(userDocRef, { isAdmin: true });
+      showToast("Kích hoạt quyền Admin thành công!", "success");
+      setModal(null);
+    } else {
+      showToast("Mã Admin không chính xác", "error");
+    }
+  };
+
+  const applyGiftcode = async () => {
+    if (form.giftcode === 'NGUYEN2024') {
+      const newBalance = userData.balance + 10000;
+      await updateBalance(userData.username, newBalance);
+      await logTransaction(userData.username, 'Giftcode', 10000, 'Sử dụng mã NGUYEN2024');
+      showToast("Nhận 10,000đ thành công!");
+      setModal(null);
+    } else {
+      showToast("Mã Giftcode không hợp lệ", "error");
+    }
+  };
+
+  // UI Components
+  const ModalBase = ({ title, children, onClose }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+          <h3 className="text-xl font-bold text-white">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition"><X size={20}/></button>
         </div>
+        <div className="p-6">{children}</div>
+      </div>
     </div>
+  );
 
-    <!-- Main Game View -->
-    <div id="game-view" class="hidden w-full max-w-2xl">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6 glass-card p-4 rounded-xl">
-            <div>
-                <p class="text-slate-400 text-sm">Xin chào, <span id="display-name" class="text-white font-bold"></span></p>
-                <p class="text-2xl font-bold text-green-400"><span id="display-balance">20,000</span>đ</p>
-            </div>
-            <div class="flex gap-2">
-                <button id="admin-btn" onclick="openAdmin()" class="hidden bg-purple-600 p-2 rounded-lg hover:bg-purple-700"><i class="fas fa-user-shield"></i></button>
-                <button onclick="logout()" class="bg-red-500/20 text-red-400 p-2 rounded-lg hover:bg-red-500 hover:text-white transition"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
+  return (
+    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-blue-500/30">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[100] px-6 py-3 rounded-2xl shadow-xl border animate-in slide-in-from-right-full ${
+          toast.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-green-500/20 border-green-500/50 text-green-400'
+        }`}>
+          {toast.msg}
         </div>
+      )}
 
-        <!-- Betting Console -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="glass-card p-6 rounded-2xl flex flex-col items-center justify-center">
-                <div id="result-circle" class="w-32 h-32 rounded-full border-4 border-slate-700 flex items-center justify-center text-5xl font-bold text-slate-300 transition-all duration-300">
-                    ?
-                </div>
-                <p class="mt-4 text-slate-400">Kết quả vòng quay</p>
+      {view === 'auth' ? (
+        <div className="flex flex-col items-center justify-center min-h-screen p-6">
+          <div className="w-full max-w-md bg-slate-900/50 border border-slate-800 p-8 rounded-[2.5rem] backdrop-blur-xl">
+            <div className="mb-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg shadow-blue-600/20">
+                <Wallet className="text-white" size={32} />
+              </div>
+              <h1 className="text-3xl font-black text-white tracking-tight">BETMASTER</h1>
+              <p className="text-slate-500 mt-2">Đăng nhập để tiếp tục cuộc chơi</p>
             </div>
 
-            <div class="glass-card p-6 rounded-2xl space-y-4">
-                <div>
-                    <label class="block text-sm text-slate-400 mb-2">Số tiền cược (đ)</label>
-                    <input type="number" id="bet-amount" value="1000" min="100" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg outline-none">
+            <div className="space-y-4">
+              <input 
+                type="text" placeholder="Tên đăng nhập" 
+                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl focus:border-blue-500 outline-none transition"
+                value={form.username} onChange={e => setForm({...form, username: e.target.value})}
+              />
+              <input 
+                type="password" placeholder="Mật khẩu" 
+                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl focus:border-blue-500 outline-none transition"
+                value={form.password} onChange={e => setForm({...form, password: e.target.value})}
+              />
+              <button 
+                onClick={handleAuth}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+              >
+                {authMode === 'login' ? 'Đăng Nhập' : 'Đăng Ký Tài Khoản'}
+              </button>
+              <button 
+                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                className="w-full text-slate-400 text-sm hover:text-white transition"
+              >
+                {authMode === 'login' ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
+          {/* Header */}
+          <header className="flex justify-between items-center bg-slate-900/50 border border-slate-800 p-4 rounded-[2rem] backdrop-blur-md">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center cursor-pointer hover:scale-105 transition active:scale-95 shadow-lg shadow-blue-500/20"
+                onClick={() => setModal('profile')}
+              >
+                <User className="text-white" size={24} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Số dư hiện tại</p>
+                <p className="text-xl font-black text-green-400">{userData.balance.toLocaleString()}đ</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {userData.isAdmin && (
+                <button onClick={() => setModal('admin')} className="p-3 bg-purple-500/10 text-purple-400 rounded-xl hover:bg-purple-500/20 transition">
+                  <Shield size={22} />
+                </button>
+              )}
+              <button onClick={() => setView('auth')} className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition">
+                <LogOut size={22} />
+              </button>
+            </div>
+          </header>
+
+          {/* Game Body */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center justify-center relative overflow-hidden group">
+               <div className={`text-8xl font-black transition-all duration-500 ${
+                 gameResult.status === 'win' ? 'text-green-500 scale-110' : 
+                 gameResult.status === 'lose' ? 'text-red-500 scale-90' : 'text-slate-700'
+               }`}>
+                 {gameResult.num}
+               </div>
+               <p className="mt-6 text-slate-500 font-medium">KẾT QUẢ VÒNG QUAY</p>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
+              <div>
+                <label className="text-sm font-bold text-slate-500 uppercase mb-2 block">Số tiền đặt (đ)</label>
+                <input 
+                  type="number" value={bet.amount} 
+                  onChange={e => setBet({...bet, amount: parseInt(e.target.value) || 0})}
+                  className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl focus:border-blue-500 outline-none transition font-mono text-xl"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-sm font-bold text-slate-500 uppercase mb-2">
+                  <span>Tỷ lệ nhân</span>
+                  <span className="text-blue-400">{bet.multiplier}x</span>
                 </div>
-                <div>
-                    <label class="block text-sm text-slate-400 mb-2">Tỷ lệ nhân: <span id="multiplier-val" class="text-blue-400 font-bold">1x</span></label>
-                    <input type="range" id="multiplier-slider" min="1" max="3" step="0.1" value="1" class="w-full h-2 rounded-lg cursor-pointer">
-                    <div class="flex justify-between text-xs text-slate-500 mt-1">
-                        <span>1x (Dễ)</span>
-                        <span>3x (Khó)</span>
+                <input 
+                  type="range" min="1" max="3" step="0.1" value={bet.multiplier}
+                  onChange={e => setBet({...bet, multiplier: parseFloat(e.target.value)})}
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => playGame('under')}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-black p-5 rounded-2xl transition shadow-lg shadow-amber-500/20"
+                >
+                  DƯỚI 50
+                </button>
+                <button 
+                  onClick={() => playGame('over')}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-black p-5 rounded-2xl transition shadow-lg shadow-indigo-500/20"
+                >
+                  TRÊN 50
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {modal === 'profile' && (
+        <ModalBase title="Hồ Sơ Của Bạn" onClose={() => setModal(null)}>
+          <div className="space-y-2">
+             <button onClick={() => setModal('account')} className="w-full flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-2xl transition group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Settings size={20}/></div>
+                  <span className="font-bold">Quản lý tài khoản</span>
+                </div>
+                <ChevronRight size={18} className="text-slate-600 group-hover:text-white"/>
+             </button>
+             <button onClick={() => setModal('giftcode')} className="w-full flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-2xl transition group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-pink-500/10 text-pink-400 rounded-lg"><Gift size={20}/></div>
+                  <span className="font-bold">Nhập Giftcode</span>
+                </div>
+                <ChevronRight size={18} className="text-slate-600 group-hover:text-white"/>
+             </button>
+             <div className="mt-6 p-4 border border-dashed border-slate-700 rounded-2xl">
+               <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Lịch sử giao dịch gần đây</h4>
+               <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                  {userData.transactions?.slice().reverse().map((t, i) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <span className="text-slate-400">{t.type}</span>
+                      <span className={t.amount > 0 ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                        {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString()}đ
+                      </span>
                     </div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="playGame('under')" class="flex-1 bg-amber-500 hover:bg-amber-600 p-3 rounded-lg font-bold">Dưới 50</button>
-                    <button onclick="playGame('over')" class="flex-1 bg-indigo-500 hover:bg-indigo-600 p-3 rounded-lg font-bold">Trên 50</button>
-                </div>
-            </div>
-        </div>
-    </div>
+                  ))}
+               </div>
+             </div>
+          </div>
+        </ModalBase>
+      )}
 
-    <!-- Admin Modal -->
-    <div id="admin-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-        <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl max-h-[90vh] flex flex-col">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="text-xl font-bold">Quản Trị Viên</h3>
-                <button onclick="closeAdmin()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="text-slate-500 border-b border-slate-800">
-                            <th class="pb-3">Người dùng</th>
-                            <th class="pb-3">Số dư</th>
-                            <th class="pb-3">Trạng thái</th>
-                            <th class="pb-3">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-user-list">
-                        <!-- Users will be injected here -->
-                    </tbody>
+      {modal === 'account' && (
+        <ModalBase title="Quản Lý Tài Khoản" onClose={() => setModal('profile')}>
+           <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-800/50 rounded-2xl">
+                  <p className="text-xs text-slate-500 font-bold uppercase">ID Người dùng</p>
+                  <p className="font-mono">{userData.username}</p>
+                </div>
+                <div className="p-4 bg-slate-800/50 rounded-2xl">
+                  <p className="text-xs text-slate-500 font-bold uppercase">Tham gia</p>
+                  <p className="font-mono text-sm">{new Date(userData.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              {!userData.isAdmin && (
+                <div className="pt-4 border-t border-slate-800">
+                  <label className="text-sm font-bold text-slate-500 uppercase mb-2 block">Kích hoạt quyền Admin</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="password" placeholder="Mã Admin Code..." 
+                      className="flex-1 bg-slate-800/50 border border-slate-700 p-3 rounded-xl focus:border-purple-500 outline-none transition"
+                      value={form.adminCode} onChange={e => setForm({...form, adminCode: e.target.value})}
+                    />
+                    <button onClick={verifyAdmin} className="bg-purple-600 px-4 rounded-xl font-bold">Gửi</button>
+                  </div>
+                </div>
+              )}
+           </div>
+        </ModalBase>
+      )}
+
+      {modal === 'giftcode' && (
+        <ModalBase title="Đổi Mã Quà Tặng" onClose={() => setModal('profile')}>
+           <div className="space-y-4">
+              <input 
+                type="text" placeholder="Nhập mã Giftcode..." 
+                className="w-full bg-slate-800/50 border border-slate-700 p-4 rounded-2xl focus:border-pink-500 outline-none transition text-center text-xl font-black"
+                value={form.giftcode} onChange={e => setForm({...form, giftcode: e.target.value})}
+              />
+              <button onClick={applyGiftcode} className="w-full bg-pink-600 p-4 rounded-2xl font-bold shadow-lg shadow-pink-600/20">Xác Nhận</button>
+              <p className="text-center text-xs text-slate-500 italic">Mẹo: Thử mã NGUYEN2024</p>
+           </div>
+        </ModalBase>
+      )}
+
+      {modal === 'admin' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+           <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden max-h-[90vh] flex flex-col shadow-2xl">
+              <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-800/20">
+                <div>
+                  <h3 className="text-2xl font-black text-white">BẢNG ĐIỀU KHIỂN QUẢN TRỊ</h3>
+                  <p className="text-slate-500 text-sm">Quản lý tổng cộng {allUsers.length} người dùng</p>
+                </div>
+                <button onClick={() => setModal(null)} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition"><X size={24}/></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
+                      <th className="pb-4 px-4">Người dùng</th>
+                      <th className="pb-4 px-4">Số dư</th>
+                      <th className="pb-4 px-4">Trạng thái</th>
+                      <th className="pb-4 px-4">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allUsers.map((u, i) => (
+                      <tr key={i} className="group border-b border-slate-800/50 hover:bg-slate-800/30 transition">
+                        <td className="py-4 px-4">
+                          <div 
+                            className="flex items-center gap-3 cursor-pointer"
+                            onClick={() => { setSelectedUserDetail(u); setModal('userDetails'); }}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center group-hover:bg-blue-500/20 transition">
+                              <User size={18} className="group-hover:text-blue-400"/>
+                            </div>
+                            <div>
+                              <div className="font-bold text-white">{u.username}</div>
+                              <div className="text-xs text-slate-500">{u.isAdmin ? 'Quản trị viên' : 'Thành viên'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 font-mono font-bold text-green-400">{u.balance.toLocaleString()}đ</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${u.isBanned ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}>
+                            {u.isBanned ? 'Bị Khóa' : 'Hoạt Động'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                           <div className="flex gap-2">
+                              <button 
+                                onClick={async () => {
+                                  await updateBalance(u.id, u.balance + 10000);
+                                  await logTransaction(u.id, 'Admin', 10000, 'Admin tặng tiền');
+                                }}
+                                className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition"
+                              >
+                                +10k
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id);
+                                  await updateDoc(userRef, { isBanned: !u.isBanned });
+                                }}
+                                className={`px-3 py-1 rounded-lg text-xs font-bold transition ${u.isBanned ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-500'}`}
+                              >
+                                {u.isBanned ? 'Mở Khóa' : 'Khóa'}
+                              </button>
+                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
-            </div>
+              </div>
+           </div>
         </div>
-    </div>
+      )}
 
-    <script>
-        // --- DATA STRUCTURE & STORAGE ---
-        // Admin code: "ADMIN99"
-        const ADMIN_CODE = "ADMIN99";
-        let users = JSON.parse(localStorage.getItem('betUsers')) || [];
-        let currentUser = null;
-
-        // --- AUTH LOGIC ---
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById('toast');
-            const content = document.getElementById('toast-content');
-            content.textContent = msg;
-            content.className = `px-6 py-3 rounded-lg shadow-lg text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
-            toast.classList.remove('translate-x-full');
-            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
-        }
-
-        function handleAuth(type) {
-            const userInp = document.getElementById('username').value.trim();
-            const passInp = document.getElementById('password').value.trim();
-
-            if (!userInp || !passInp) return showToast("Vui lòng điền đủ thông tin", "error");
-
-            if (type === 'register') {
-                if (users.find(u => u.username === userInp)) return showToast("Tài khoản đã tồn tại", "error");
-                
-                const newUser = {
-                    username: userInp,
-                    password: passInp,
-                    balance: 20000,
-                    isAdmin: userInp.includes(ADMIN_CODE),
-                    isBanned: false
-                };
-                users.push(newUser);
-                saveData();
-                showToast("Đăng ký thành công! Nhận 20k");
-            } else {
-                const user = users.find(u => u.username === userInp && u.password === passInp);
-                if (!user) return showToast("Sai tài khoản hoặc mật khẩu", "error");
-                if (user.isBanned) return showToast("Tài khoản này đã bị khóa!", "error");
-                
-                currentUser = user;
-                initGame();
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('betUsers', JSON.stringify(users));
-        }
-
-        function logout() {
-            currentUser = null;
-            document.getElementById('auth-view').classList.remove('hidden');
-            document.getElementById('game-view').classList.add('hidden');
-        }
-
-        // --- GAME LOGIC ---
-        const slider = document.getElementById('multiplier-slider');
-        const multVal = document.getElementById('multiplier-val');
-
-        slider.oninput = function() {
-            multVal.textContent = this.value + 'x';
-        }
-
-        function initGame() {
-            document.getElementById('auth-view').classList.add('hidden');
-            document.getElementById('game-view').classList.remove('hidden');
-            document.getElementById('display-name').textContent = currentUser.username;
-            updateBalanceUI();
+      {modal === 'userDetails' && selectedUserDetail && (
+        <ModalBase title={`Chi tiết: ${selectedUserDetail.username}`} onClose={() => { setSelectedUserDetail(null); setModal('admin'); }}>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl">
+               <div className="flex items-center gap-3 text-green-400">
+                  <Wallet size={20}/>
+                  <span className="font-black text-xl">{selectedUserDetail.balance.toLocaleString()}đ</span>
+               </div>
+               <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <History size={16}/>
+                  <span>{selectedUserDetail.transactions?.length || 0} Giao dịch</span>
+               </div>
+            </div>
             
-            if (currentUser.isAdmin) {
-                document.getElementById('admin-btn').classList.remove('hidden');
-            }
+            <div className="space-y-2">
+               <h4 className="text-xs font-bold text-slate-500 uppercase">Lịch sử giao dịch chi tiết</h4>
+               <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                  {selectedUserDetail.transactions?.slice().reverse().map((t, idx) => (
+                    <div key={idx} className="p-3 bg-slate-800/30 border border-slate-800 rounded-xl flex justify-between items-center">
+                       <div>
+                          <p className="text-sm font-bold text-white">{t.type}</p>
+                          <p className="text-[10px] text-slate-500">{t.desc}</p>
+                          <p className="text-[9px] text-slate-600">{new Date(t.time).toLocaleString()}</p>
+                       </div>
+                       <div className={`font-mono font-bold ${t.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString()}
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          </div>
+        </ModalBase>
+      )}
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+          cursor: pointer;
         }
-
-        function updateBalanceUI() {
-            document.getElementById('display-balance').textContent = currentUser.balance.toLocaleString();
-            saveData();
-        }
-
-        function playGame(side) {
-            const bet = parseInt(document.getElementById('bet-amount').value);
-            const mult = parseFloat(slider.value);
-
-            if (isNaN(bet) || bet <= 0) return showToast("Tiền cược không hợp lệ", "error");
-            if (bet > currentUser.balance) return showToast("Không đủ tiền cược", "error");
-
-            // Animation
-            const circle = document.getElementById('result-circle');
-            circle.textContent = "...";
-            circle.className = "w-32 h-32 rounded-full border-4 border-blue-500 flex items-center justify-center text-5xl font-bold text-blue-400 animate-pulse";
-
-            setTimeout(() => {
-                const luckyNum = Math.floor(Math.random() * 100) + 1;
-                circle.textContent = luckyNum;
-                circle.classList.remove('animate-pulse');
-
-                let win = false;
-                if (side === 'over' && luckyNum > 50) win = true;
-                if (side === 'under' && luckyNum <= 50) win = true;
-
-                if (win) {
-                    const winAmount = Math.floor(bet * mult);
-                    currentUser.balance += winAmount;
-                    circle.className = "w-32 h-32 rounded-full border-4 border-green-500 flex items-center justify-center text-5xl font-bold text-green-500 win-animation";
-                    showToast(`Thắng! +${winAmount.toLocaleString()}đ`);
-                } else {
-                    const loseAmount = Math.floor(bet * mult);
-                    currentUser.balance -= loseAmount;
-                    circle.className = "w-32 h-32 rounded-full border-4 border-red-500 flex items-center justify-center text-5xl font-bold text-red-500";
-                    showToast(`Thua! -${loseAmount.toLocaleString()}đ`, "error");
-                    
-                    if (currentUser.balance < 0) currentUser.balance = 0;
-                }
-                updateBalanceUI();
-            }, 800);
-        }
-
-        // --- ADMIN FUNCTIONS ---
-        function openAdmin() {
-            document.getElementById('admin-modal').classList.remove('hidden');
-            renderAdminUsers();
-        }
-
-        function closeAdmin() {
-            document.getElementById('admin-modal').classList.add('hidden');
-        }
-
-        function renderAdminUsers() {
-            const tbody = document.getElementById('admin-user-list');
-            tbody.innerHTML = '';
-
-            users.forEach((user, index) => {
-                if (user.username === currentUser.username) return; // Không tự quản lý chính mình
-
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
-                tr.innerHTML = `
-                    <td class="py-4">
-                        <div class="font-bold">${user.username}</div>
-                        <div class="text-xs text-slate-500">${user.isAdmin ? 'Admin' : 'Người chơi'}</div>
-                    </td>
-                    <td class="py-4 font-mono text-green-400">${user.balance.toLocaleString()}đ</td>
-                    <td class="py-4">
-                        <span class="px-2 py-1 rounded text-xs ${user.isBanned ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}">
-                            ${user.isBanned ? 'Bị khóa' : 'Hoạt động'}
-                        </span>
-                    </td>
-                    <td class="py-4">
-                        <div class="flex gap-2">
-                            <button onclick="adjustMoney(${index}, 5000)" class="bg-blue-600/20 text-blue-400 px-2 py-1 rounded hover:bg-blue-600 hover:text-white transition">+5k</button>
-                            <button onclick="adjustMoney(${index}, -5000)" class="bg-orange-600/20 text-orange-400 px-2 py-1 rounded hover:bg-orange-600 hover:text-white transition">-5k</button>
-                            <button onclick="toggleBan(${index})" class="bg-slate-700 px-2 py-1 rounded hover:bg-red-600 transition">
-                                <i class="fas ${user.isBanned ? 'fa-unlock' : 'fa-ban'}"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function adjustMoney(idx, amount) {
-            users[idx].balance += amount;
-            if (users[idx].balance < 0) users[idx].balance = 0;
-            saveData();
-            renderAdminUsers();
-            showToast("Đã cập nhật số dư");
-        }
-
-        function toggleBan(idx) {
-            users[idx].isBanned = !users[idx].isBanned;
-            saveData();
-            renderAdminUsers();
-            showToast(users[idx].isBanned ? "Đã khóa người dùng" : "Đã mở khóa");
-        }
-
-    </script>
-</body>
-</html>
+      `}</style>
+    </div>
+  );
+}
 

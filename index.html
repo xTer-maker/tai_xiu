@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetMaster - Trò Chơi Đặt Cược</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .win-animation { animation: bounce 0.5s ease infinite alternate; }
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
+        input[type="range"] { accent-color: #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Notification System -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transition-all duration-300 transform translate-x-full">
+        <div id="toast-content" class="px-6 py-3 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+
+    <!-- Login/Register View -->
+    <div id="auth-view" class="w-full max-w-md glass-card p-8 rounded-2xl">
+        <h2 class="text-3xl font-bold text-center mb-8 text-blue-400">BetMaster</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1">Tên đăng nhập</label>
+                <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-lg outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Mật khẩu</label>
+                <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-lg outline-none focus:border-blue-500">
+            </div>
+            <div class="flex gap-2 pt-4">
+                <button onclick="handleAuth('login')" class="flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold transition">Đăng Nhập</button>
+                <button onclick="handleAuth('register')" class="flex-1 bg-slate-700 hover:bg-slate-600 p-3 rounded-lg font-bold transition">Đăng Ký</button>
+            </div>
+            <p class="text-xs text-slate-500 text-center mt-4">Mẹo: Đăng ký lần đầu nhận 20,000đ</p>
+        </div>
+    </div>
+
+    <!-- Main Game View -->
+    <div id="game-view" class="hidden w-full max-w-2xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6 glass-card p-4 rounded-xl">
+            <div>
+                <p class="text-slate-400 text-sm">Xin chào, <span id="display-name" class="text-white font-bold"></span></p>
+                <p class="text-2xl font-bold text-green-400"><span id="display-balance">20,000</span>đ</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="admin-btn" onclick="openAdmin()" class="hidden bg-purple-600 p-2 rounded-lg hover:bg-purple-700"><i class="fas fa-user-shield"></i></button>
+                <button onclick="logout()" class="bg-red-500/20 text-red-400 p-2 rounded-lg hover:bg-red-500 hover:text-white transition"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+
+        <!-- Betting Console -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-2xl flex flex-col items-center justify-center">
+                <div id="result-circle" class="w-32 h-32 rounded-full border-4 border-slate-700 flex items-center justify-center text-5xl font-bold text-slate-300 transition-all duration-300">
+                    ?
+                </div>
+                <p class="mt-4 text-slate-400">Kết quả vòng quay</p>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-2">Số tiền cược (đ)</label>
+                    <input type="number" id="bet-amount" value="1000" min="100" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-2">Tỷ lệ nhân: <span id="multiplier-val" class="text-blue-400 font-bold">1x</span></label>
+                    <input type="range" id="multiplier-slider" min="1" max="3" step="0.1" value="1" class="w-full h-2 rounded-lg cursor-pointer">
+                    <div class="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>1x (Dễ)</span>
+                        <span>3x (Khó)</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="playGame('under')" class="flex-1 bg-amber-500 hover:bg-amber-600 p-3 rounded-lg font-bold">Dưới 50</button>
+                    <button onclick="playGame('over')" class="flex-1 bg-indigo-500 hover:bg-indigo-600 p-3 rounded-lg font-bold">Trên 50</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="admin-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Quản Trị Viên</h3>
+                <button onclick="closeAdmin()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-slate-500 border-b border-slate-800">
+                            <th class="pb-3">Người dùng</th>
+                            <th class="pb-3">Số dư</th>
+                            <th class="pb-3">Trạng thái</th>
+                            <th class="pb-3">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-user-list">
+                        <!-- Users will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURE & STORAGE ---
+        // Admin code: "ADMIN99"
+        const ADMIN_CODE = "ADMIN99";
+        let users = JSON.parse(localStorage.getItem('betUsers')) || [];
+        let currentUser = null;
+
+        // --- AUTH LOGIC ---
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const content = document.getElementById('toast-content');
+            content.textContent = msg;
+            content.className = `px-6 py-3 rounded-lg shadow-lg text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+
+        function handleAuth(type) {
+            const userInp = document.getElementById('username').value.trim();
+            const passInp = document.getElementById('password').value.trim();
+
+            if (!userInp || !passInp) return showToast("Vui lòng điền đủ thông tin", "error");
+
+            if (type === 'register') {
+                if (users.find(u => u.username === userInp)) return showToast("Tài khoản đã tồn tại", "error");
+                
+                const newUser = {
+                    username: userInp,
+                    password: passInp,
+                    balance: 20000,
+                    isAdmin: userInp.includes(ADMIN_CODE),
+                    isBanned: false
+                };
+                users.push(newUser);
+                saveData();
+                showToast("Đăng ký thành công! Nhận 20k");
+            } else {
+                const user = users.find(u => u.username === userInp && u.password === passInp);
+                if (!user) return showToast("Sai tài khoản hoặc mật khẩu", "error");
+                if (user.isBanned) return showToast("Tài khoản này đã bị khóa!", "error");
+                
+                currentUser = user;
+                initGame();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('betUsers', JSON.stringify(users));
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('auth-view').classList.remove('hidden');
+            document.getElementById('game-view').classList.add('hidden');
+        }
+
+        // --- GAME LOGIC ---
+        const slider = document.getElementById('multiplier-slider');
+        const multVal = document.getElementById('multiplier-val');
+
+        slider.oninput = function() {
+            multVal.textContent = this.value + 'x';
+        }
+
+        function initGame() {
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('game-view').classList.remove('hidden');
+            document.getElementById('display-name').textContent = currentUser.username;
+            updateBalanceUI();
+            
+            if (currentUser.isAdmin) {
+                document.getElementById('admin-btn').classList.remove('hidden');
+            }
+        }
+
+        function updateBalanceUI() {
+            document.getElementById('display-balance').textContent = currentUser.balance.toLocaleString();
+            saveData();
+        }
+
+        function playGame(side) {
+            const bet = parseInt(document.getElementById('bet-amount').value);
+            const mult = parseFloat(slider.value);
+
+            if (isNaN(bet) || bet <= 0) return showToast("Tiền cược không hợp lệ", "error");
+            if (bet > currentUser.balance) return showToast("Không đủ tiền cược", "error");
+
+            // Animation
+            const circle = document.getElementById('result-circle');
+            circle.textContent = "...";
+            circle.className = "w-32 h-32 rounded-full border-4 border-blue-500 flex items-center justify-center text-5xl font-bold text-blue-400 animate-pulse";
+
+            setTimeout(() => {
+                const luckyNum = Math.floor(Math.random() * 100) + 1;
+                circle.textContent = luckyNum;
+                circle.classList.remove('animate-pulse');
+
+                let win = false;
+                if (side === 'over' && luckyNum > 50) win = true;
+                if (side === 'under' && luckyNum <= 50) win = true;
+
+                if (win) {
+                    const winAmount = Math.floor(bet * mult);
+                    currentUser.balance += winAmount;
+                    circle.className = "w-32 h-32 rounded-full border-4 border-green-500 flex items-center justify-center text-5xl font-bold text-green-500 win-animation";
+                    showToast(`Thắng! +${winAmount.toLocaleString()}đ`);
+                } else {
+                    const loseAmount = Math.floor(bet * mult);
+                    currentUser.balance -= loseAmount;
+                    circle.className = "w-32 h-32 rounded-full border-4 border-red-500 flex items-center justify-center text-5xl font-bold text-red-500";
+                    showToast(`Thua! -${loseAmount.toLocaleString()}đ`, "error");
+                    
+                    if (currentUser.balance < 0) currentUser.balance = 0;
+                }
+                updateBalanceUI();
+            }, 800);
+        }
+
+        // --- ADMIN FUNCTIONS ---
+        function openAdmin() {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            renderAdminUsers();
+        }
+
+        function closeAdmin() {
+            document.getElementById('admin-modal').classList.add('hidden');
+        }
+
+        function renderAdminUsers() {
+            const tbody = document.getElementById('admin-user-list');
+            tbody.innerHTML = '';
+
+            users.forEach((user, index) => {
+                if (user.username === currentUser.username) return; // Không tự quản lý chính mình
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
+                tr.innerHTML = `
+                    <td class="py-4">
+                        <div class="font-bold">${user.username}</div>
+                        <div class="text-xs text-slate-500">${user.isAdmin ? 'Admin' : 'Người chơi'}</div>
+                    </td>
+                    <td class="py-4 font-mono text-green-400">${user.balance.toLocaleString()}đ</td>
+                    <td class="py-4">
+                        <span class="px-2 py-1 rounded text-xs ${user.isBanned ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}">
+                            ${user.isBanned ? 'Bị khóa' : 'Hoạt động'}
+                        </span>
+                    </td>
+                    <td class="py-4">
+                        <div class="flex gap-2">
+                            <button onclick="adjustMoney(${index}, 5000)" class="bg-blue-600/20 text-blue-400 px-2 py-1 rounded hover:bg-blue-600 hover:text-white transition">+5k</button>
+                            <button onclick="adjustMoney(${index}, -5000)" class="bg-orange-600/20 text-orange-400 px-2 py-1 rounded hover:bg-orange-600 hover:text-white transition">-5k</button>
+                            <button onclick="toggleBan(${index})" class="bg-slate-700 px-2 py-1 rounded hover:bg-red-600 transition">
+                                <i class="fas ${user.isBanned ? 'fa-unlock' : 'fa-ban'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function adjustMoney(idx, amount) {
+            users[idx].balance += amount;
+            if (users[idx].balance < 0) users[idx].balance = 0;
+            saveData();
+            renderAdminUsers();
+            showToast("Đã cập nhật số dư");
+        }
+
+        function toggleBan(idx) {
+            users[idx].isBanned = !users[idx].isBanned;
+            saveData();
+            renderAdminUsers();
+            showToast(users[idx].isBanned ? "Đã khóa người dùng" : "Đã mở khóa");
+        }
+
+    </script>
+</body>
+</html>
+

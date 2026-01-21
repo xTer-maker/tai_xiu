@@ -3,310 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BETMASTER - Đẳng Cấp Casino 2026</title>
+    <title>LUXURY CASINO | Management Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;900&family=Orbitron:wght@500;900&display=swap');
         
-        :root {
-            --primary: #fbbf24;
-            --bg: #020617;
-            --card: rgba(30, 41, 59, 0.5);
-        }
-
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg);
+            font-family: 'Montserrat', sans-serif;
+            background: #020617;
             color: #f8fafc;
-            background-image: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #020617 80%);
-            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 70%);
         }
 
-        .glass {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .neo-card {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .neo-card:hover {
-            transform: translateY(-10px) scale(1.02);
-            border-color: var(--primary);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(251, 191, 36, 0.1);
-        }
-
-        .gold-text {
-            background: linear-gradient(to bottom, #fde047, #ca8a04);
+        .font-game { font-family: 'Orbitron', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+        .gold-glow {
+            background: linear-gradient(to right, #fbbf24, #fef3c7, #d97706);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
         }
 
-        .playing-card {
-            width: 60px;
-            height: 85px;
-            border-radius: 8px;
-            background: white;
-            color: black;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 5px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            position: relative;
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .diamond { position: absolute; width: 20px; height: 20px; pointer-events: none; z-index: 1000; }
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg) scale(0); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg) scale(1.2); opacity: 0; }
         }
 
-        .btn-gold {
-            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
-            transition: all 0.3s;
-        }
-
-        .btn-gold:hover {
-            transform: brightness(1.1) translateY(-2px);
-            box-shadow: 0 8px 25px rgba(217, 119, 6, 0.5);
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-        .float { animation: float 3s ease-in-out infinite; }
+        .modal-enter { animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="overflow-x-hidden">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- Ban Screen -->
-    <div id="ban-screen" class="hidden fixed inset-0 z-[1000] glass flex flex-col items-center justify-center p-6 text-center">
-        <div class="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-8 border border-red-500/50 float">
-            <i data-lucide="shield-off" class="text-red-500 w-12 h-12"></i>
+    <!-- Audio Effects -->
+    <audio id="snd-spin" src="https://assets.mixkit.co/active_storage/sfx/2016/2016-preview.mp3"></audio>
+    <audio id="snd-win" src="https://assets.mixkit.co/active_storage/sfx/2021/2021-preview.mp3"></audio>
+    <audio id="snd-lose" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3"></audio>
+
+    <div id="diamond-layer" class="fixed inset-0 pointer-events-none z-[1000]"></div>
+
+    <!-- Auth UI -->
+    <div id="auth-container" class="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl">
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-black font-game gold-glow italic tracking-tighter">LUXURY</h1>
+            <p class="text-slate-500 text-[10px] tracking-[0.5em] uppercase mt-2 font-bold">Hệ Thống Diamond</p>
         </div>
-        <h1 class="text-4xl font-black gold-text uppercase mb-4">TRUY CẬP BỊ TỪ CHỐI</h1>
-        <p id="ban-reason" class="text-slate-400 max-w-md mb-8">Tài khoản của bạn đã bị vô hiệu hóa do vi phạm chính sách cộng đồng.</p>
-        <div class="bg-slate-900/80 p-6 rounded-3xl border border-white/10 mb-8">
-            <p class="text-xs text-slate-500 uppercase font-bold mb-2">Thời gian hết hạn</p>
-            <p id="ban-expiry" class="text-xl font-bold text-red-400">VĨNH VIỄN</p>
+
+        <div id="login-form" class="space-y-4">
+            <input type="email" id="login-email" placeholder="Email hội viên" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-amber-500">
+            <input type="password" id="login-password" placeholder="Mật khẩu" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-amber-500">
+            <button onclick="handleLogin()" class="w-full bg-amber-600 p-4 rounded-2xl font-bold text-lg shadow-xl shadow-amber-900/20">ĐĂNG NHẬP</button>
+            <p class="text-center text-sm text-slate-500">Người mới? <button onclick="toggleAuth(false)" class="text-amber-400 font-bold">Đăng ký</button></p>
         </div>
-        <button onclick="location.reload()" class="btn-gold px-10 py-3 rounded-full text-slate-900 font-bold uppercase text-xs">Quay lại</button>
+
+        <div id="register-form" class="hidden space-y-4">
+            <input type="text" id="reg-name" placeholder="Tên hiển thị" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-amber-500">
+            <input type="email" id="reg-email" placeholder="Email" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-amber-500">
+            <input type="password" id="reg-password" placeholder="Mật khẩu (6+ ký tự)" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-amber-500">
+            <button onclick="handleRegister()" class="w-full bg-amber-600 p-4 rounded-2xl font-bold text-lg">TẠO TÀI KHOẢN</button>
+            <p class="text-center text-sm text-slate-500">Đã có tài khoản? <button onclick="toggleAuth(true)" class="text-amber-400 font-bold">Đăng nhập</button></p>
+        </div>
     </div>
 
-    <!-- Navigation -->
-    <nav id="main-nav" class="hidden fixed top-0 w-full z-50 glass px-6 py-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4 cursor-pointer" onclick="switchView('lobby')">
-                <div class="w-12 h-12 btn-gold rounded-2xl flex items-center justify-center shadow-2xl">
-                    <i data-lucide="gem" class="text-slate-900 w-7 h-7"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-black italic gold-text tracking-tighter leading-none">BETMASTER</h1>
-                    <span class="text-[8px] font-bold text-slate-500 tracking-[0.3em] uppercase">Professional Casino</span>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <button id="admin-btn" onclick="switchView('admin')" class="hidden w-11 h-11 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-2xl flex items-center justify-center hover:bg-purple-500/40 transition">
-                    <i data-lucide="lock" class="w-5 h-5"></i>
-                </button>
-                <div onclick="toggleProfile()" class="flex items-center gap-3 bg-slate-800/80 p-1.5 pl-5 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700 transition">
-                    <p id="nav-balance" class="text-sm font-black text-green-400">0đ</p>
-                    <div class="w-9 h-9 rounded-xl bg-slate-600 flex items-center justify-center shadow-inner">
-                        <i data-lucide="user" class="w-5 h-5"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+    <!-- Main Game UI -->
+    <div id="game-container" class="hidden w-full max-w-6xl flex flex-col gap-6 relative">
         
-        <!-- Auth View -->
-        <div id="view-auth" class="hidden max-w-md mx-auto">
-            <div class="glass p-10 rounded-[3rem] shadow-2xl border border-white/10 text-center relative overflow-hidden">
-                <div class="absolute -top-20 -left-20 w-40 h-40 bg-yellow-500/10 blur-[80px]"></div>
-                <div class="w-24 h-24 btn-gold rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl float">
-                    <i data-lucide="gem" class="text-slate-900 w-12 h-12"></i>
-                </div>
-                <h2 id="auth-title" class="text-5xl font-black gold-text italic mb-10 tracking-tighter">BETMASTER</h2>
-                
-                <div class="space-y-5">
-                    <div class="relative">
-                        <i data-lucide="user" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                        <input type="text" id="auth-user" placeholder="Tên đăng nhập" class="w-full bg-slate-900/50 p-5 pl-14 rounded-2xl border border-white/5 focus:border-yellow-500/50 outline-none transition">
-                    </div>
-                    <div class="relative">
-                        <i data-lucide="key-round" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                        <input type="password" id="auth-pass" placeholder="Mật khẩu" class="w-full bg-slate-900/50 p-5 pl-14 rounded-2xl border border-white/5 focus:border-yellow-500/50 outline-none transition">
-                    </div>
-                    <button onclick="handleAuth()" class="w-full btn-gold text-slate-900 font-black py-5 rounded-2xl text-sm uppercase tracking-widest">Bắt đầu ngay</button>
-                    <button onclick="toggleAuth()" id="auth-toggle" class="text-slate-500 text-[10px] font-bold uppercase opacity-60 hover:opacity-100 transition">Chưa có tài khoản? Đăng ký</button>
-                </div>
-            </div>
-        </div>
+        <!-- Top Left: Directory (Admin Only) -->
+        <button id="btn-directory" onclick="toggleModal('modal-directory')" class="hidden absolute -top-2 -left-2 w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border border-white/10 shadow-lg z-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+        </button>
 
-        <!-- Lobby View -->
-        <div id="view-lobby" class="hidden space-y-12">
-            <header class="flex justify-between items-end">
+        <!-- Navbar -->
+        <div class="glass p-6 rounded-[2.5rem] flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-700 flex items-center justify-center font-black text-black text-xl">VIP</div>
                 <div>
-                    <h2 class="text-6xl font-black italic gold-text tracking-tighter uppercase">SẢNH VIP</h2>
-                    <p class="text-slate-500 text-xs font-bold tracking-[0.4em] mt-2 uppercase">Chào mừng quý khách trở lại</p>
+                    <h2 class="text-lg font-black flex items-center">
+                        <span id="display-username">...</span>
+                        <span id="admin-tag" class="hidden bg-red-600 text-[10px] px-2 py-0.5 rounded-full ml-2 font-bold">ADMIN</span>
+                    </h2>
+                    <p class="text-3xl font-black font-game gold-glow" id="display-balance">0</p>
                 </div>
-                <button onclick="activateVIP()" class="text-[9px] font-bold text-slate-700 hover:text-yellow-500 uppercase tracking-widest transition">Kích hoạt quyền VIP</button>
-            </header>
+            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                <!-- Game: Tài Xỉu -->
-                <div onclick="switchView('dice')" class="neo-card p-10 rounded-[3.5rem] cursor-pointer group">
-                    <div class="w-20 h-20 bg-gradient-to-br from-red-500 to-rose-700 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-red-500/20 group-hover:rotate-12 transition">
-                        <i data-lucide="dice-5" class="w-10 h-10 text-white"></i>
-                    </div>
-                    <h3 class="text-3xl font-black italic uppercase mb-3">Tài Xỉu 3D</h3>
-                    <p class="text-slate-500 text-sm leading-relaxed mb-8">Kết quả minh bạch, xanh chín tuyệt đối. Tỉ lệ ăn cực cao.</p>
-                    <div class="flex items-center gap-3 text-yellow-500 font-bold text-xs uppercase">Vào bàn cược <i data-lucide="arrow-right" class="w-4 h-4"></i></div>
-                </div>
-
-                <!-- Game: Tiến Lên -->
-                <div onclick="switchView('poker')" class="neo-card p-10 rounded-[3.5rem] cursor-pointer group">
-                    <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-blue-500/20 group-hover:rotate-12 transition">
-                        <i data-lucide="spade" class="w-10 h-10 text-white"></i>
-                    </div>
-                    <h3 class="text-3xl font-black italic uppercase mb-3">Tiến Lên</h3>
-                    <p class="text-slate-500 text-sm leading-relaxed mb-8">Đấu trí cùng cao thủ. Game bài dân gian đẳng cấp Casino.</p>
-                    <div class="flex items-center gap-3 text-yellow-500 font-bold text-xs uppercase">Chơi ngay <i data-lucide="arrow-right" class="w-4 h-4"></i></div>
-                </div>
-
-                <!-- Game: Baccarat -->
-                <div class="neo-card p-10 rounded-[3.5rem] opacity-40 grayscale cursor-not-allowed">
-                    <div class="w-20 h-20 bg-slate-700 rounded-3xl flex items-center justify-center mb-10">
-                        <i data-lucide="crown" class="w-10 h-10 text-slate-500"></i>
-                    </div>
-                    <h3 class="text-3xl font-black italic uppercase mb-3">Baccarat</h3>
-                    <p class="text-slate-500 text-sm">Hệ thống đang bảo trì kỹ thuật...</p>
-                </div>
+            <div class="flex items-center gap-3">
+                <!-- Shield Icon (Admin Logic) -->
+                <button id="btn-shield" onclick="toggleModal('modal-shield')" class="hidden w-14 h-14 rounded-2xl bg-red-900/30 border border-red-500/30 flex items-center justify-center hover:bg-red-900/50 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </button>
+                <!-- Profile Avatar -->
+                <button onclick="toggleModal('modal-profile')" class="w-14 h-14 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center hover:scale-105 active:scale-95 transition-all overflow-hidden">
+                    <img id="profile-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky" class="w-full h-full object-cover">
+                </button>
             </div>
         </div>
 
-        <!-- Dice View -->
-        <div id="view-dice" class="hidden max-w-xl mx-auto glass p-12 rounded-[4rem] text-center space-y-12">
-            <button onclick="switchView('lobby')" class="text-slate-600 hover:text-white uppercase font-bold text-[10px] tracking-widest transition">← Trở lại</button>
-            <div class="flex justify-center gap-10">
-                <div id="dice-1" class="w-32 h-32 bg-white rounded-[2.5rem] text-slate-900 text-6xl font-black flex items-center justify-center shadow-2xl transform -rotate-6">?</div>
-                <div id="dice-2" class="w-32 h-32 bg-white rounded-[2.5rem] text-slate-900 text-6xl font-black flex items-center justify-center shadow-2xl transform rotate-6">?</div>
-            </div>
-            <div class="grid grid-cols-2 gap-6">
-                <button onclick="playDice('xiu')" class="bg-blue-600/90 py-10 rounded-[2.5rem] text-4xl font-black shadow-xl hover:bg-blue-500 transition">XỈU</button>
-                <button onclick="playDice('tai')" class="bg-red-600/90 py-10 rounded-[2.5rem] text-4xl font-black shadow-xl hover:bg-red-600 transition">TÀI</button>
-            </div>
-            <div class="bg-slate-950/80 p-8 rounded-[3rem] border border-white/5">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-4">Mức cược hiện tại</p>
-                <input type="number" id="dice-bet" value="10000" class="w-full bg-transparent text-center text-5xl font-black text-yellow-500 outline-none">
-            </div>
-        </div>
-
-        <!-- Poker View (Tiến Lên) -->
-        <div id="view-poker" class="hidden max-w-4xl mx-auto glass p-10 rounded-[4rem] min-h-[600px] flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute inset-0 bg-green-900/10 pointer-events-none"></div>
-            
-            <div class="flex justify-between items-center relative z-10">
-                <button onclick="switchView('lobby')" class="text-slate-500 font-bold text-xs uppercase">Rời bàn</button>
-                <div class="flex gap-4">
-                    <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">BÀN: #2026</div>
-                    <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">MỨC CƯỢC: 10K</div>
-                </div>
-            </div>
-
-            <!-- Dealer/Opponent Space -->
-            <div class="flex justify-center gap-2 opacity-60">
-                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
-                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
-                <div class="w-14 h-20 bg-slate-800 rounded-lg border border-white/10"></div>
-            </div>
-
-            <!-- Table Space -->
-            <div id="poker-table" class="flex justify-center items-center h-40">
-                <p class="text-slate-600 font-bold italic uppercase tracking-widest text-sm">Lượt đánh của bạn...</p>
-            </div>
-
-            <!-- Player Cards -->
-            <div class="space-y-6 relative z-10">
-                <div id="player-hand" class="flex justify-center -space-x-8">
-                    <!-- Cards will be injected here -->
-                </div>
-                <div class="flex justify-center gap-4">
-                    <button class="bg-slate-800 px-10 py-4 rounded-2xl font-bold text-xs uppercase">Bỏ lượt</button>
-                    <button onclick="alert('Đang đánh bài...')" class="btn-gold px-12 py-4 rounded-2xl font-black text-xs uppercase text-slate-900">Đánh bài</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin View -->
-        <div id="view-admin" class="hidden space-y-8">
-            <div class="glass p-8 rounded-[3rem] flex justify-between items-center border-purple-500/20 shadow-2xl">
-                <div class="flex items-center gap-5">
-                    <div class="w-14 h-14 bg-purple-500/20 rounded-2xl flex items-center justify-center">
-                        <i data-lucide="shield-check" class="text-purple-400 w-8 h-8"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-3xl font-black gold-text italic tracking-tight uppercase">Admin Master</h2>
-                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Hệ thống bảo mật tối cao</p>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[550px]">
+            <div class="lg:col-span-4 glass rounded-[3rem] p-10 flex flex-col justify-between">
+                <div class="space-y-6">
+                    <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>Cổng Cược Diamond
+                    </h4>
+                    <input type="number" id="bet-amount" value="10000" class="w-full bg-black/40 border border-white/5 p-6 rounded-3xl text-3xl font-black outline-none text-amber-500 font-game">
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-[10px] font-bold uppercase text-slate-500">
+                            <span>Tỷ lệ nhân: <span id="val-multiplier" class="text-amber-500">1.5x</span></span>
+                        </div>
+                        <input type="range" id="range-multiplier" min="1.1" max="9.9" step="0.1" value="1.5" class="w-full accent-amber-500">
                     </div>
                 </div>
-                <button onclick="switchView('lobby')" class="bg-slate-800 px-8 py-3 rounded-full font-bold text-[10px] uppercase">Đóng Panel</button>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="playGame('tai')" class="group relative p-8 rounded-[2rem] bg-amber-600 font-black text-center overflow-hidden active:scale-95 transition-all">
+                        <span class="relative z-10 text-xs uppercase opacity-70">Trên</span>
+                        <div class="relative z-10 text-3xl font-game" id="label-tai">50</div>
+                    </button>
+                    <button onclick="playGame('xiu')" class="group relative p-8 rounded-[2rem] bg-slate-800 border border-white/10 font-black text-center overflow-hidden active:scale-95 transition-all">
+                        <span class="relative z-10 text-xs uppercase opacity-70">Dưới</span>
+                        <div class="relative z-10 text-3xl font-game" id="label-xiu">50</div>
+                    </button>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-5" id="admin-user-list">
-                <!-- Admin entries injected here -->
+            <div class="lg:col-span-8 glass rounded-[3rem] flex flex-col items-center justify-center relative overflow-hidden">
+                <div id="dice-display" class="text-[14rem] font-black font-game gold-glow leading-none select-none">?</div>
+                <div id="status-text" class="text-2xl font-black uppercase tracking-[0.3em] opacity-0 transition-all mt-4">...</div>
             </div>
         </div>
+    </div>
 
-    </main>
-
+    <!-- Modals -->
     <!-- Profile Modal -->
-    <div id="profile-modal" class="hidden fixed inset-0 z-[100] glass flex items-center justify-center p-6">
-        <div class="bg-slate-900 w-full max-w-md rounded-[3rem] p-10 border border-white/10 shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h3 class="text-2xl font-black gold-text italic uppercase">Tài khoản</h3>
-                <button onclick="toggleProfile()"><i data-lucide="x" class="text-slate-500"></i></button>
+    <div id="modal-profile" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="glass w-full max-w-md p-8 rounded-[3rem] modal-enter">
+            <div class="flex flex-col items-center text-center space-y-4">
+                <div class="w-24 h-24 rounded-3xl bg-amber-500 mb-2 flex items-center justify-center text-4xl shadow-2xl">💎</div>
+                <h3 id="prof-name" class="text-2xl font-black">...</h3>
+                <p id="prof-uid" class="text-[10px] text-slate-500 tracking-widest font-bold">UID: 000000</p>
+                
+                <div class="w-full grid grid-cols-2 gap-3 mt-4">
+                    <div class="bg-black/40 p-4 rounded-2xl">
+                        <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Số dư</p>
+                        <p id="prof-balance" class="text-xl font-black text-amber-500">0</p>
+                    </div>
+                    <div class="bg-black/40 p-4 rounded-2xl">
+                        <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Chức vụ</p>
+                        <p id="prof-rank" class="text-xl font-black">Hội Viên</p>
+                    </div>
+                </div>
+
+                <div class="w-full space-y-3 pt-6 border-t border-white/5">
+                    <input type="password" id="new-pass" placeholder="Mật khẩu mới..." class="w-full bg-black/40 border border-white/10 p-4 rounded-xl outline-none text-sm">
+                    <button onclick="updatePassword()" class="w-full py-3 bg-slate-800 rounded-xl font-bold text-sm">Cập Nhật Mật Khẩu</button>
+                </div>
+
+                <div class="w-full pt-4">
+                    <input type="text" id="admin-code-input" placeholder="Nhập mã Admin..." class="w-full bg-red-900/10 border border-red-500/20 p-4 rounded-xl outline-none text-sm text-red-500">
+                    <button onclick="applyAdmin()" class="w-full mt-2 py-3 bg-red-600/20 text-red-500 rounded-xl font-bold text-xs uppercase tracking-widest">Kích Hoạt Admin</button>
+                </div>
+
+                <div class="flex gap-2 w-full pt-6">
+                    <button onclick="handleLogout()" class="flex-1 py-4 bg-rose-600/20 text-rose-500 rounded-2xl font-bold text-sm uppercase">Đăng Xuất</button>
+                    <button onclick="toggleModal('modal-profile')" class="flex-1 py-4 bg-white/5 rounded-2xl font-bold text-sm uppercase">Đóng</button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Admin Shield Modal -->
+    <div id="modal-shield" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="glass w-full max-w-xl p-10 rounded-[3rem] modal-enter">
+            <h3 class="text-2xl font-black text-red-500 mb-8 flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                QUẢN TRỊ VIÊN
+            </h3>
             
             <div class="space-y-6">
-                <div class="bg-slate-950 p-6 rounded-3xl border border-white/5">
-                    <p class="text-[9px] text-slate-500 font-bold uppercase mb-2">Tên hội viên</p>
-                    <p id="p-username" class="text-xl font-black uppercase tracking-widest">...</p>
-                    <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                        <div>
-                            <p class="text-[9px] text-slate-500 font-bold uppercase">IP Hiện tại</p>
-                            <p id="p-ip" class="text-xs font-bold text-blue-400">0.0.0.0</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[9px] text-slate-500 font-bold uppercase">IP Đăng ký</p>
-                            <p id="p-reg-ip" class="text-xs font-bold text-slate-400">0.0.0.0</p>
-                        </div>
-                    </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">UID Mục tiêu</label>
+                    <input type="number" id="adm-target-uid" placeholder="Nhập UID 6 số..." class="w-full bg-black/40 border border-white/10 p-4 rounded-xl outline-none font-game">
                 </div>
 
-                <div class="bg-slate-800/40 p-6 rounded-3xl border border-white/10">
-                    <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-4">Mã quà tặng (Giftcode)</p>
-                    <div class="flex gap-3">
-                        <input type="text" id="giftcode-input" placeholder="LIXI2026..." class="flex-1 bg-black p-4 rounded-xl text-xs uppercase outline-none focus:border-yellow-500/50">
-                        <button onclick="redeem()" class="btn-gold px-6 rounded-xl font-black text-[10px] uppercase text-slate-900">Nhận</button>
-                    </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="admAction('ban')" class="p-6 bg-slate-800 rounded-2xl text-center hover:bg-slate-700">
+                        <p class="text-[10px] text-slate-500 uppercase mb-1">Trạng thái</p>
+                        <p class="font-bold text-rose-500">Khóa / Mở</p>
+                    </button>
+                    <button onclick="admAction('delete')" class="p-6 bg-rose-900/20 border border-rose-500/20 rounded-2xl text-center hover:bg-rose-900/40">
+                        <p class="text-[10px] text-slate-500 uppercase mb-1">Nguy hiểm</p>
+                        <p class="font-bold text-rose-500 uppercase">Xóa Vĩnh Viễn</p>
+                    </button>
                 </div>
 
-                <button onclick="location.reload()" class="w-full bg-red-500/10 text-red-500 py-4 rounded-2xl font-bold uppercase text-[10px] border border-red-500/20 hover:bg-red-500 hover:text-white transition">Đăng xuất</button>
+                <div class="space-y-4 pt-4">
+                    <input type="number" id="adm-amount" placeholder="Số Diamond (+/-)..." class="w-full bg-black/40 border border-white/10 p-4 rounded-xl outline-none font-game text-amber-500">
+                    <button onclick="admAction('money')" class="w-full py-4 bg-emerald-600 rounded-2xl font-black uppercase text-sm">Điều chỉnh số dư</button>
+                </div>
             </div>
+
+            <button onclick="toggleModal('modal-shield')" class="w-full mt-8 py-4 bg-white/5 rounded-2xl font-bold uppercase text-xs tracking-widest">Quay lại</button>
+        </div>
+    </div>
+
+    <!-- Directory Modal -->
+    <div id="modal-directory" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+        <div class="glass w-full max-w-4xl p-10 rounded-[4rem] h-[80vh] flex flex-col modal-enter">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-black text-amber-500 flex items-center gap-4">
+                    DANH BẠ HỘI VIÊN
+                    <span id="user-count" class="text-xs bg-white/10 px-3 py-1 rounded-full text-slate-400">0</span>
+                </h2>
+                <button onclick="toggleModal('modal-directory')" class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center">✕</button>
+            </div>
+            <div id="dir-list" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scroll"></div>
         </div>
     </div>
 
@@ -320,209 +237,242 @@
             appId: "1:298730080386:web:9dc19f94dab52df710cc9b"
         };
 
-        let db, auth, currentUser, currentIP = "0.0.0.0";
-        let mode = 'login';
-        const MASTER = 'nguyenadmin';
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let user = null, userData = null, isPlaying = false, targetX = 50;
 
-        async function init() {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                auth = firebase.auth();
-                await auth.signInAnonymously();
-                
-                const ipRes = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipRes.json();
-                currentIP = ipData.ip;
-
-                lucide.createIcons();
-                switchView('auth');
-            } catch (e) { alert("Lỗi hệ thống: " + e.message); }
-        }
-
-        function toggleAuth() {
-            mode = mode === 'login' ? 'register' : 'login';
-            document.getElementById('auth-title').innerText = mode === 'login' ? 'BETMASTER' : 'ĐĂNG KÝ';
-            document.getElementById('auth-toggle').innerText = mode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập';
-        }
-
-        async function handleAuth() {
-            const u = document.getElementById('auth-user').value.trim().toLowerCase();
-            const p = document.getElementById('auth-pass').value.trim();
-            if(!u || !p) return;
-
-            const ref = db.collection('users').doc(u);
-            const snap = await ref.get();
-
-            if(mode === 'register') {
-                if(snap.exists) return alert("Tài khoản đã tồn tại!");
-                const data = {
-                    username: u, password: p, balance: 100000,
-                    isAdmin: (u === MASTER), regIP: currentIP, lastIP: currentIP,
-                    banned: false, banExpiry: null, redeemed: []
-                };
-                await ref.set(data);
-                alert("Đăng ký thành công! Hãy đăng nhập."); toggleAuth();
-            } else {
-                if(!snap.exists || snap.data().password !== p) return alert("Sai tài khoản hoặc mật khẩu!");
-                const data = snap.data();
-                
-                if(data.banned) {
-                    const now = new Date().getTime();
-                    if(data.banExpiry === 'forever' || data.banExpiry > now) {
-                        return showBan(data.banExpiry);
+        // Auth Listener
+        auth.onAuthStateChanged(async (u) => {
+            if (u) {
+                user = u;
+                const ref = db.collection('users').doc(u.uid);
+                const doc = await ref.get();
+                if(doc.exists) {
+                    userData = doc.data();
+                    if(userData.banned) {
+                        alert("Tài khoản của bạn đã bị khóa!");
+                        return auth.signOut();
                     }
+                    document.getElementById('auth-container').classList.add('hidden');
+                    document.getElementById('game-container').classList.remove('hidden');
+                    setupUserUI();
+                    startListen();
                 }
-
-                currentUser = data;
-                await ref.update({ lastIP: currentIP });
-                ref.onSnapshot(doc => { if(doc.exists) { currentUser = doc.data(); updateNav(); } });
-                switchView('lobby');
+            } else {
+                document.getElementById('auth-container').classList.remove('hidden');
+                document.getElementById('game-container').classList.add('hidden');
             }
+        });
+
+        function setupUserUI() {
+            document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`;
+            updateLabels();
         }
 
-        function showBan(expiry) {
-            document.getElementById('ban-screen').classList.remove('hidden');
-            document.getElementById('ban-expiry').innerText = expiry === 'forever' ? 'VĨNH VIỄN' : new Date(expiry).toLocaleString();
-        }
-
-        function switchView(v) {
-            ['auth', 'lobby', 'dice', 'poker', 'admin'].forEach(id => document.getElementById('view-'+id).classList.add('hidden'));
-            document.getElementById('view-'+v).classList.remove('hidden');
-            document.getElementById('main-nav').classList.toggle('hidden', v === 'auth');
-            
-            if(v === 'poker') renderPokerCards();
-            if(v === 'admin') loadAdmin();
-            lucide.createIcons();
-        }
-
-        function updateNav() {
-            document.getElementById('nav-balance').innerText = currentUser.balance.toLocaleString() + 'đ';
-            document.getElementById('admin-btn').classList.toggle('hidden', !currentUser.isAdmin);
-        }
-
-        function toggleProfile() {
-            document.getElementById('profile-modal').classList.toggle('hidden');
-            document.getElementById('p-username').innerText = currentUser.username;
-            document.getElementById('p-ip').innerText = currentIP;
-            document.getElementById('p-reg-ip').innerText = currentUser.regIP;
-        }
-
-        async function redeem() {
-            const code = document.getElementById('giftcode-input').value.toUpperCase();
-            if(code === 'LIXI2026') {
-                if(currentUser.redeemed?.includes(code)) return alert("Bạn đã nhận mã này rồi!");
-                await db.collection('users').doc(currentUser.username).update({
-                    balance: firebase.firestore.FieldValue.increment(100000),
-                    redeemed: firebase.firestore.FieldValue.arrayUnion(code)
-                });
-                alert("Chúc mừng! Bạn nhận được 100K.");
-                toggleProfile();
-            } else { alert("Mã không hợp lệ!"); }
-        }
-
-        // --- DICE GAME ---
-        async function playDice(side) {
-            const bet = parseInt(document.getElementById('dice-bet').value);
-            if(bet > currentUser.balance) return alert("Số dư không đủ!");
-
-            const d1 = Math.floor(Math.random()*6)+1;
-            const d2 = Math.floor(Math.random()*6)+1;
-            document.getElementById('dice-1').innerText = d1;
-            document.getElementById('dice-2').innerText = d2;
-
-            const win = (side === 'tai' && (d1+d2+4) >= 11) || (side === 'xiu' && (d1+d2+4) <= 10);
-            await db.collection('users').doc(currentUser.username).update({
-                balance: firebase.firestore.FieldValue.increment(win ? bet : -bet)
+        function startListen() {
+            db.collection('users').doc(user.uid).onSnapshot(doc => {
+                userData = doc.data();
+                document.getElementById('display-balance').innerText = userData.balance.toLocaleString();
+                document.getElementById('display-username').innerText = userData.username;
+                document.getElementById('prof-name').innerText = userData.username;
+                document.getElementById('prof-uid').innerText = `UID: ${userData.uid}`;
+                document.getElementById('prof-balance').innerText = userData.balance.toLocaleString();
+                
+                if(userData.isAdmin) {
+                    document.getElementById('admin-tag').classList.remove('hidden');
+                    document.getElementById('btn-shield').classList.remove('hidden');
+                    document.getElementById('btn-directory').classList.remove('hidden');
+                    document.getElementById('prof-rank').innerText = "QUẢN TRỊ";
+                    document.getElementById('prof-rank').className = "text-xl font-black text-red-500";
+                }
             });
         }
 
-        // --- POKER (TIẾN LÊN) ---
-        function renderPokerCards() {
-            const hand = document.getElementById('player-hand');
-            hand.innerHTML = '';
-            const suits = ['♠', '♣', '♦', '♥'];
-            const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+        // Cập nhật nhãn Trên/Dưới dựa trên Multiplier
+        // Logic: Nhân càng cao, tỷ lệ thắng càng thấp (Vùng an toàn thu hẹp)
+        function updateLabels() {
+            const m = parseFloat(document.getElementById('range-multiplier').value);
+            document.getElementById('val-multiplier').innerText = m.toFixed(1) + 'x';
             
-            // Render 13 cards random
-            for(let i=0; i<13; i++) {
-                const s = suits[Math.floor(Math.random()*4)];
-                const v = values[Math.floor(Math.random()*13)];
-                const color = (s === '♦' || s === '♥') ? 'text-red-500' : 'text-slate-900';
-                hand.innerHTML += `
-                    <div class="playing-card group hover:-translate-y-10 transition cursor-pointer">
-                        <div class="${color} text-xs">${v}${s}</div>
-                        <div class="${color} text-xl self-center">${s}</div>
-                        <div class="${color} text-xs rotate-180">${v}${s}</div>
-                    </div>
-                `;
+            // Xử lý tỷ lệ X: Tỷ lệ nhân 1.1x -> X khoảng 10. Tỷ lệ nhân 9.9x -> X khoảng 90.
+            // Công thức: x = multiplier * 10
+            targetX = Math.floor(m * 10);
+            if(targetX > 98) targetX = 98;
+            if(targetX < 2) targetX = 2;
+
+            document.getElementById('label-tai').innerText = targetX;
+            document.getElementById('label-xiu').innerText = (100 - targetX);
+        }
+
+        document.getElementById('range-multiplier').oninput = updateLabels;
+
+        // Game Play
+        async function playGame(choice) {
+            if(isPlaying) return;
+            const amt = parseInt(document.getElementById('bet-amount').value);
+            if(amt > userData.balance || amt < 1000) return alert("Số dư không đủ hoặc cược tối thiểu 1k");
+
+            isPlaying = true;
+            document.getElementById('snd-spin').play();
+            const status = document.getElementById('status-text');
+            status.innerText = "ĐANG TÍNH TOÁN...";
+            status.style.opacity = "1";
+            status.className = "text-2xl font-black uppercase tracking-[0.3em] mt-4 text-amber-500 animate-pulse";
+
+            let cycle = 0;
+            const anim = setInterval(() => {
+                document.getElementById('dice-display').innerText = Math.floor(Math.random() * 99) + 1;
+                cycle++;
+                if(cycle > 20) {
+                    clearInterval(anim);
+                    const result = Math.floor(Math.random() * 100) + 1;
+                    
+                    // Logic thắng:
+                    // 'tai' (Trên X): Kết quả > X
+                    // 'xiu' (Dưới 100-X): Kết quả < (100-X)
+                    const isWin = (choice === 'tai' && result > targetX) || (choice === 'xiu' && result < (100 - targetX));
+                    const mult = parseFloat(document.getElementById('range-multiplier').value);
+                    const change = isWin ? Math.floor(amt * mult) : -amt;
+
+                    db.collection('users').doc(user.uid).update({ balance: firebase.firestore.FieldValue.increment(change) });
+
+                    document.getElementById('dice-display').innerText = result;
+                    status.innerText = isWin ? `THẮNG +${change.toLocaleString()} ✨` : `THUA ${Math.abs(change).toLocaleString()} 💀`;
+                    status.className = `text-3xl font-black uppercase tracking-widest mt-4 ${isWin ? 'text-emerald-400' : 'text-rose-600'}`;
+                    status.classList.remove('animate-pulse');
+
+                    if(isWin) { document.getElementById('snd-win').play(); doRain(); }
+                    else document.getElementById('snd-lose').play();
+                    
+                    isPlaying = false;
+                }
+            }, 60);
+        }
+
+        function doRain() {
+            for(let i=0; i<40; i++) {
+                setTimeout(() => {
+                    const d = document.createElement('div');
+                    d.className = 'diamond'; d.innerHTML = '💎';
+                    d.style.left = Math.random() * 100 + 'vw';
+                    d.style.animation = `fall ${Math.random() * 2 + 1}s linear forwards`;
+                    document.getElementById('diamond-layer').appendChild(d);
+                    setTimeout(() => d.remove(), 3000);
+                }, i * 50);
             }
         }
 
-        // --- ADMIN SYSTEM ---
-        async function activateVIP() {
-            const code = prompt("Nhập mã kích hoạt quyền Admin:");
-            if(code === 'ADMIN200829') {
-                await db.collection('users').doc(currentUser.username).update({ isAdmin: true });
-                alert("Kích hoạt Admin thành công!");
-                updateNav();
+        // Admin Actions
+        async function admAction(type) {
+            const uid = parseInt(document.getElementById('adm-target-uid').value);
+            if(!uid) return alert("Nhập UID mục tiêu");
+            
+            const snap = await db.collection('users').where('uid', '==', uid).get();
+            if(snap.empty) return alert("Không tìm thấy người dùng này");
+            const docId = snap.docs[0].id;
+            const ref = db.collection('users').doc(docId);
+
+            if(type === 'ban') {
+                const isBanned = snap.docs[0].data().banned;
+                await ref.update({ banned: !isBanned });
+                alert(isBanned ? "Đã mở khóa" : "Đã khóa tài khoản");
+            } else if(type === 'delete') {
+                if(confirm("Xác nhận xóa vĩnh viễn?")) {
+                    await ref.delete();
+                    alert("Đã xóa khỏi hệ thống");
+                }
+            } else if(type === 'money') {
+                const a = parseInt(document.getElementById('adm-amount').value);
+                if(!a) return alert("Nhập số tiền");
+                await ref.update({ balance: firebase.firestore.FieldValue.increment(a) });
+                alert("Đã cập nhật số dư");
             }
         }
 
-        async function loadAdmin() {
+        // Directory
+        async function loadDirectory() {
+            const list = document.getElementById('dir-list');
+            list.innerHTML = `<p class="text-center py-10 opacity-50">Đang tải danh sách...</p>`;
             const snap = await db.collection('users').get();
-            const list = document.getElementById('admin-user-list');
-            list.innerHTML = '';
+            list.innerHTML = "";
+            document.getElementById('user-count').innerText = snap.size;
+            
             snap.forEach(doc => {
                 const u = doc.data();
-                if(u.username === MASTER) return;
-                list.innerHTML += `
-                    <div class="glass p-6 rounded-3xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl ${u.banned ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'} flex items-center justify-center">
-                                <i data-lucide="${u.banned ? 'user-x' : 'user-check'}" class="w-5 h-5"></i>
-                            </div>
-                            <div>
-                                <p class="font-black uppercase text-sm">${u.username}</p>
-                                <p class="text-[8px] text-slate-500 font-bold">REG: ${u.regIP} | LAST: ${u.lastIP}</p>
-                            </div>
-                        </div>
-                        <div class="text-center md:text-right">
-                            <p class="text-green-400 font-black text-xs">${u.balance.toLocaleString()}đ</p>
-                            <p class="text-[8px] text-slate-600 uppercase font-bold">${u.banned ? 'Đang bị khóa' : 'Đang hoạt động'}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="adjustMoney('${u.username}')" class="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Sửa tiền</button>
-                            <button onclick="banAction('${u.username}', 1)" class="bg-orange-500/10 text-orange-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Khóa 1H</button>
-                            <button onclick="banAction('${u.username}', 'forever')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Khóa VV</button>
-                            <button onclick="unbanAction('${u.username}')" class="bg-green-500/10 text-green-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Mở</button>
+                const item = document.createElement('div');
+                item.className = "bg-white/5 p-5 rounded-3xl flex justify-between items-center border border-white/5 hover:border-white/10 transition-all";
+                item.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs">${u.username[0].toUpperCase()}</div>
+                        <div>
+                            <p class="font-bold text-sm">${u.username} ${u.isAdmin ? '👑' : ''}</p>
+                            <p class="text-[10px] text-slate-500">UID: ${u.uid} | IP: ${u.lastIP || '?'}</p>
                         </div>
                     </div>
+                    <div class="text-right">
+                        <p class="text-amber-500 font-bold text-sm">${u.balance.toLocaleString()} VND</p>
+                        <p class="text-[9px] ${u.banned ? 'text-rose-500' : 'text-emerald-500'} font-bold uppercase">${u.banned ? 'Bị Khóa' : 'Hoạt động'}</p>
+                    </div>
                 `;
+                list.appendChild(item);
             });
-            lucide.createIcons();
         }
 
-        async function adjustMoney(u) {
-            const amt = parseInt(prompt("Nhập số tiền thay đổi (vd: 500000 hoặc -100000):"));
-            if(!isNaN(amt)) {
-                await db.collection('users').doc(u).update({ balance: firebase.firestore.FieldValue.increment(amt) });
-                loadAdmin();
+        // Helpers
+        window.toggleModal = (id) => {
+            const m = document.getElementById(id);
+            m.classList.toggle('hidden');
+            if(id === 'modal-directory' && !m.classList.contains('hidden')) loadDirectory();
+        };
+
+        window.toggleAuth = (isL) => {
+            document.getElementById('login-form').classList.toggle('hidden', !isL);
+            document.getElementById('register-form').classList.toggle('hidden', isL);
+        };
+
+        window.handleLogin = async () => {
+            const e = document.getElementById('login-email').value;
+            const p = document.getElementById('login-password').value;
+            try { await auth.signInWithEmailAndPassword(e, p); } catch(err) { alert("Sai thông tin đăng nhập"); }
+        };
+
+        window.handleRegister = async () => {
+            const n = document.getElementById('reg-name').value;
+            const e = document.getElementById('reg-email').value;
+            const p = document.getElementById('reg-password').value;
+            if(p.length < 6) return alert("Mật khẩu tối thiểu 6 ký tự");
+            try {
+                const c = await auth.createUserWithEmailAndPassword(e, p);
+                const uid = Math.floor(100000 + Math.random() * 899999);
+                await db.collection('users').doc(c.user.uid).set({
+                    uid, username: n, balance: 100000, banned: false, isAdmin: false, createdAt: Date.now()
+                });
+            } catch(err) { alert(err.message); }
+        };
+
+        window.updatePassword = async () => {
+            const p = document.getElementById('new-pass').value;
+            if(p.length < 6) return alert("Mật khẩu mới quá ngắn");
+            try {
+                await auth.currentUser.updatePassword(p);
+                alert("Đã đổi mật khẩu!");
+                document.getElementById('new-pass').value = "";
+            } catch(e) { alert("Vui lòng đăng nhập lại trước khi đổi MK"); }
+        };
+
+        window.applyAdmin = async () => {
+            const code = document.getElementById('admin-code-input').value;
+            if(code === "LUXURY99") {
+                await db.collection('users').doc(user.uid).update({ isAdmin: true });
+                alert("Đã kích hoạt đặc quyền Admin!");
+                toggleModal('modal-profile');
+            } else {
+                alert("Mã Admin không chính xác");
             }
-        }
+        };
 
-        async function banAction(u, type) {
-            const expiry = type === 'forever' ? 'forever' : new Date().getTime() + (3600 * 1000);
-            await db.collection('users').doc(u).update({ banned: true, banExpiry: expiry });
-            alert("Đã khóa người dùng " + u); loadAdmin();
-        }
-
-        async function unbanAction(u) {
-            await db.collection('users').doc(u).update({ banned: false, banExpiry: null });
-            alert("Đã mở khóa người dùng " + u); loadAdmin();
-        }
-
-        init();
+        window.handleLogout = () => auth.signOut().then(() => window.location.reload());
     </script>
 </body>
 </html>
